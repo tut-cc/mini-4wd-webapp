@@ -1,0 +1,135 @@
+<!--
+  MIT License
+  
+  Copyright (c) 2022 Covao / Koichi Kobayashi (Original DonkeyCopilot)
+  Copyright (c) 2026 (Mini 4WD Copilot Mockup)
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+-->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mini 4WD Copilot</title>
+    <meta name="description" content="A beautiful and dynamic webapp mockup for controlling a Mini 4WD, inspired by DonkeyCopilot.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Background Camera Feed Mockup -->
+    <div class="camera-feed" style="background-image: url('assets/bg.jpg');"></div>
+
+    <div class="glass-overlay">
+        <!-- Header Controls -->
+        <header class="top-bar">
+            <div class="status-group">
+                <div class="status-badge" id="fps-counter">FPS 60</div>
+                <div class="status-badge" id="gamepad-status">Gamepad: Off</div>
+            </div>
+            <h1 class="app-title">MINI 4WD COPILOT</h1>
+            <div class="action-group">
+                <button class="btn glass-btn" id="btn-fullscreen">Full Screen</button>
+                <button class="btn glass-btn" id="btn-auto-rec">Auto REC</button>
+                <button class="btn glass-btn danger" id="btn-rec">REC</button>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard">
+            <!-- Left: Throttle Control -->
+            <div class="control-panel left-panel">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 100 100">
+                        <path class="gauge-bg" d="M 10 90 A 40 40 0 0 1 90 90" fill="none" stroke-width="8" stroke-linecap="round" />
+                        <path class="gauge-fill" id="throttle-gauge" d="M 10 90 A 40 40 0 0 1 90 90" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="125" stroke-dashoffset="125" />
+                    </svg>
+                    <div class="gauge-value" id="throttle-value">0</div>
+                    <div class="gauge-label">THROTTLE</div>
+                </div>
+                <div class="slider-wrapper vertical">
+                    <input type="range" id="throttle-slider" class="custom-slider" min="-1" max="1" step="0.01" value="0">
+                </div>
+            </div>
+
+            <!-- Center: Drive Mode -->
+            <div class="center-panel">
+                <button class="btn mega-btn" id="btn-drive-mode">Manual Mode</button>
+                <div class="max-accel-display">Max Accel: <span id="max-accel-val">100</span></div>
+            </div>
+
+            <!-- Right: Steering Control -->
+            <div class="control-panel right-panel">
+                <div class="slider-wrapper horizontal">
+                    <input type="range" id="steering-slider" class="custom-slider" min="-1" max="1" step="0.01" value="0">
+                </div>
+                <div class="gauge-container">
+                    <svg class="gauge-svg steering-svg" viewBox="0 0 100 50">
+                        <path class="gauge-bg" d="M 10 40 A 40 40 0 0 1 90 40" fill="none" stroke-width="8" stroke-linecap="round" />
+                        <polygon class="steering-pointer" id="steering-pointer" points="50,10 45,35 55,35" fill="var(--neon-blue)" />
+                    </svg>
+                    <div class="gauge-value" id="steering-value">0</div>
+                    <div class="gauge-label">STEERING</div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer / License info -->
+        <footer class="footer">
+            <button id="btn-about" class="btn text-btn">About & License</button>
+        </footer>
+    </div>
+
+    <!-- About Modal -->
+    <div id="about-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <h2>About Mini 4WD Copilot</h2>
+            <p>This application is a beautiful, modern mockup inspired by DonkeyCopilot for controlling a Mini 4WD car.</p>
+            <h3>License Information</h3>
+            <pre class="license-text">
+MIT License
+
+Copyright (c) 2022 Covao / Koichi Kobayashi
+Copyright (c) 2026
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+            </pre>
+            <button class="btn glass-btn" id="btn-close-about">Close</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
