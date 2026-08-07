@@ -41,7 +41,6 @@ const aboutModal = document.getElementById('about-modal');
 
 const fpsCounter = document.getElementById('fps-counter');
 const gamepadStatus = document.getElementById('gamepad-status');
-const cameraFeed = document.querySelector('.camera-feed');
 
 // State
 let state = {
@@ -283,10 +282,6 @@ function gameLoop(timestamp) {
     // Rotate from -90deg to 90deg based on -1 to 1
     const rot = state.steering * 45; 
     steeringPointer.style.transform = `rotate(${rot}deg)`;
-
-    // Camera feed mock effect (blur on high speed)
-    const speedBlur = Math.abs(state.throttle) * 3;
-    cameraFeed.style.filter = `brightness(0.7) contrast(1.2) blur(${speedBlur}px)`;
 
     // Mock Send WebSocket
     wsMock.send(JSON.stringify({

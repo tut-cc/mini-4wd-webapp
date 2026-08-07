@@ -33,10 +33,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Background Camera Feed Mockup -->
-    <div class="camera-feed" style="background-image: url('assets/bg.jpg');"></div>
-
-    <div class="glass-overlay">
+    <div class="app-container">
         <!-- Header Controls -->
         <header class="top-bar">
             <div class="status-group">
@@ -45,9 +42,9 @@
             </div>
             <h1 class="app-title">MINI 4WD COPILOT</h1>
             <div class="action-group">
-                <button class="btn glass-btn" id="btn-fullscreen">Full Screen</button>
-                <button class="btn glass-btn" id="btn-auto-rec">Auto REC</button>
-                <button class="btn glass-btn danger" id="btn-rec">REC</button>
+                <button class="btn" id="btn-fullscreen">Full Screen</button>
+                <button class="btn" id="btn-auto-rec">Auto REC</button>
+                <button class="btn danger" id="btn-rec">REC</button>
             </div>
         </header>
 
@@ -98,7 +95,7 @@
 
     <!-- About Modal -->
     <div id="about-modal" class="modal hidden">
-        <div class="modal-content glass-panel">
+        <div class="modal-content">
             <h2>About Mini 4WD Copilot</h2>
             <p>This application is a beautiful, modern mockup inspired by DonkeyCopilot for controlling a Mini 4WD car.</p>
             <h3>License Information</h3>
@@ -126,7 +123,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
             </pre>
-            <button class="btn glass-btn" id="btn-close-about">Close</button>
+            <button class="btn" id="btn-close-about">Close</button>
         </div>
     </div>
 
