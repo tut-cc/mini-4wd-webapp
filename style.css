@@ -155,6 +155,7 @@ html, body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    align-self: flex-end;
 }
 
 .max-accel-display {
