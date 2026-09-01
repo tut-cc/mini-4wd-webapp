@@ -42,11 +42,38 @@ python3 mock_server.py
 
 ---
 
+## サーバーアーキテクチャ (共通コア vs モック分離)
+
+マイコン実機（Raspberry Pi / ESP32 等）への移植や実機開発を容易にするため、サーバーは **共通制御・通信コア (`server/`)** と **モック固有機能 (`mock/`)** に綺麗に分離されています。
+
+```text
+mini-4wd-webapp/
+├── server/                     # 車載マイコン・実機でもそのまま使える共通パッケージ
+│   ├── constants.py            # プロトコル定数 (モード・停止要因・拒否理由)
+│   ├── controller.py           # 制御コア (Source of Truth・安全マトリクス・TOR・デッドマン監視)
+│   ├── http_ws_server.py       # 軽量非同期HTTP/WebSocket/MJPEGサーバー (pip不要・標準ライブラリのみ)
+│   └── camera_base.py          # カメラ映像プロバイダの基底インターフェース
+│
+├── mock/                       # モック開発専用パッケージ
+│   ├── camera.py               # 疑似コース・障害物描画カメラ (PNG生成)
+│   └── scenario.py             # テストシナリオ管理 (1〜5キー切替)
+│
+├── mock_server.py              # モック起動エントリポイント
+└── examples/
+    └── real_server_template.py # マイコン実機 (Raspberry Pi/GPIO/実機カメラ) 向け実装サンプル
+```
+
+- **実機マイコン向けに開発する場合:**
+  - `server/` パッケージをそのまま利用し、[`examples/real_server_template.py`](examples/real_server_template.py) のように実機のPWMドライバ（モーター/サーボ）やカメラモジュールをバインドするだけで実機サーバーを構築できます。
+
+---
+
 ## 仕様・設計ドキュメント
 詳細な仕様書は [`docs/`](docs/README.md) にあります。
 - [システムアーキテクチャ](docs/system-architecture.md)
 - [UI仕様・画面設計](docs/ui-spec.md)
 - [通信プロトコル仕様](docs/protocol.md)
 - [状態遷移・シーケンス図](docs/sequences.md)
+
 
 
