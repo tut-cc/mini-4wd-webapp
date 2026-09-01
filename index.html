@@ -2,100 +2,170 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ミニ四駆自動運転 WebApp</title>
-  <meta name="description" content="Mini 4WD Autonomous Driving Controller WebApp">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ミニ四駆自動運転 WebApp - FPV Cockpit</title>
+  <meta name="description" content="Mini 4WD Autonomous Driving Controller">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-container" id="app-container">
-    <!-- Top Status Bar -->
-    <header class="top-bar">
-      <div class="status-group">
-        <div class="status-badge" id="ws-status">WS: 接続中...</div>
-        <div class="status-badge mode-badge" id="mode-badge">MODE: MANUAL</div>
-        <div class="status-badge" id="distance-badge">前方距離: -- mm</div>
-        <div class="status-badge" id="fps-counter">FPS: 60</div>
-        <div class="status-badge" id="gamepad-status">Gamepad: Off</div>
-      </div>
-      <h1 class="app-title">ミニ四駆自動運転</h1>
-      <div class="action-group">
-        <button class="btn danger" id="btn-emergency-stop">🚨 非常停止</button>
-        <button class="btn" id="btn-fullscreen">Full Screen</button>
-      </div>
-    </header>
 
-    <!-- Notification / Reject banner -->
-    <div id="alert-banner" class="alert-banner hidden">
-      <span id="alert-message">エラー通知</span>
+    <!-- 1. Video & FPV Background Layer (車載マイコンから配信されるカメラ映像) -->
+    <div class="video-background-layer" id="video-layer">
+      <!-- リアルタイム車載カメラストリーム (MJPEG / Server-side Stream) -->
+      <img id="camera-stream" class="camera-stream" src="/video_feed" alt="RC FPV Live Stream" crossorigin="anonymous">
+
+      <!-- カメラ映像ステータスバッジ -->
+      <div class="camera-status-hud" id="camera-status-hud">
+        <span class="live-indicator-dot"></span>
+        <span id="camera-mode-label">LIVE</span>
+      </div>
+
+      <!-- 中央照準 / レーシングHUDガイド (極薄モノクロガイド) -->
+      <div class="hud-crosshair" id="hud-crosshair">
+        <div class="crosshair-center"></div>
+        <div class="crosshair-h-line"></div>
+        <div class="crosshair-v-line"></div>
+        <div class="steering-guide-marker" id="steering-guide-marker"></div>
+      </div>
     </div>
 
-    <!-- Main Dashboard -->
-    <main class="dashboard">
-      <!-- Left: Throttle Control -->
-      <div class="control-panel left-panel">
-        <div class="gauge-container">
-          <svg class="gauge-svg" viewBox="0 0 100 100">
-            <path class="gauge-bg" d="M 10 90 A 40 40 0 0 1 90 90" fill="none" stroke-width="8" stroke-linecap="round" />
-            <path class="gauge-fill" id="throttle-gauge" d="M 10 90 A 40 40 0 0 1 90 90" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="125" stroke-dashoffset="125" />
-          </svg>
-          <div class="gauge-value" id="throttle-value">0</div>
-          <div class="gauge-label">THROTTLE</div>
+    <!-- 2. Invisible Touch Control Layer (左右分割・ブラインドタッチ操作ゾーン) -->
+    <div class="touch-control-layer" id="touch-layer">
+      <!-- 左親指ゾーン: スロットル (前後) -->
+      <div class="touch-zone throttle-zone" id="touch-throttle-zone">
+        <div class="touch-hint left-hint">
+          <div class="hint-icon">▲</div>
+          <div class="hint-label">THROTTLE</div>
+          <div class="hint-icon">▼</div>
         </div>
-        <div class="slider-wrapper vertical">
-          <input type="range" id="throttle-slider" class="custom-slider" min="-1" max="1" step="0.01" value="0">
+        <!-- タッチ時に出現するバーチャルノブ (シンプル白枠) -->
+        <div class="touch-joystick-base hidden" id="throttle-joystick-base">
+          <div class="touch-joystick-track vertical-track"></div>
+          <div class="touch-joystick-thumb" id="throttle-joystick-thumb"></div>
         </div>
       </div>
 
-      <!-- Center: Drive Mode & Reset Actions -->
-      <div class="center-panel">
-        <div class="status-display-box">
-          <div class="status-title">車両ステータス</div>
-          <div class="status-detail-line">モード: <strong id="status-mode-text">MANUAL</strong></div>
-          <div class="status-detail-line">前方距離: <strong id="status-distance-text">1200 mm</strong></div>
-          <div class="status-detail-line" id="stop-reason-line">停止理由: <span id="status-stop-reason">NONE</span></div>
+      <!-- 右親指ゾーン: ステアリング (左右) -->
+      <div class="touch-zone steering-zone" id="touch-steering-zone">
+        <div class="touch-hint right-hint">
+          <div class="hint-icon">◀</div>
+          <div class="hint-label">STEERING</div>
+          <div class="hint-icon">▶</div>
+        </div>
+        <!-- タッチ時に出現するバーチャルノブ (シンプル白枠) -->
+        <div class="touch-joystick-base hidden" id="steering-joystick-base">
+          <div class="touch-joystick-track horizontal-track"></div>
+          <div class="touch-joystick-thumb" id="steering-joystick-thumb"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Translucent HUD Overlay Layer (極薄モノクロHUD) -->
+    <div class="hud-overlay-layer">
+      <!-- Top HUD Bar -->
+      <header class="hud-top-bar">
+        <!-- 左上: 接続・モード・システム情報 -->
+        <div class="hud-group hud-left">
+          <div class="hud-badge status-badge" id="ws-status">
+            <span class="status-dot"></span>
+            <span id="ws-status-text">WS: 接続中...</span>
+          </div>
+          <div class="hud-badge mode-badge" id="mode-badge">MANUAL</div>
+          <div class="hud-badge fps-badge" id="fps-counter">60 FPS</div>
+          <div class="hud-badge gamepad-badge hidden" id="gamepad-status">PAD</div>
         </div>
 
-        <button class="btn mega-btn" id="btn-drive-mode">Auto Mode へ切替</button>
-        <button class="btn mega-btn reset-btn hidden" id="btn-reset-stop">手動モードで再開 / リセット</button>
+        <!-- 中央上: 前方距離HUD -->
+        <div class="hud-group hud-center">
+          <div class="distance-hud-card" id="distance-hud-card">
+            <span class="distance-label">DIST</span>
+            <span class="distance-val" id="distance-badge">1200</span>
+            <span class="distance-unit">mm</span>
+          </div>
+        </div>
+
+        <!-- 右上: アクションボタン (非常停止・カメラ設定・フルスクリーン) -->
+        <div class="hud-group hud-right">
+          <button class="hud-btn cam-btn" id="btn-camera-settings" title="カメラ設定">CAM</button>
+          <button class="hud-btn info-btn" id="btn-about" title="システム仕様">INFO</button>
+          <button class="hud-btn fs-btn" id="btn-fullscreen" title="全画面表示">FULL</button>
+          <button class="hud-btn emergency-btn" id="btn-emergency-stop">STOP</button>
+        </div>
+      </header>
+
+      <!-- Notification / Reject banner (モノクロアラート) -->
+      <div id="alert-banner" class="hud-alert-banner hidden">
+        <span id="alert-message">エラー通知</span>
       </div>
 
-      <!-- Right: Steering Control -->
-      <div class="control-panel right-panel">
-        <div class="slider-wrapper horizontal">
-          <input type="range" id="steering-slider" class="custom-slider" min="-1" max="1" step="0.01" value="0">
-        </div>
-        <div class="gauge-container">
-          <svg class="gauge-svg steering-svg" viewBox="0 0 100 50">
-            <path class="gauge-bg" d="M 10 40 A 40 40 0 0 1 90 40" fill="none" stroke-width="8" stroke-linecap="round" />
-            <polygon class="steering-pointer" id="steering-pointer" points="50,10 45,35 55,35" fill="var(--accent-blue)" />
-          </svg>
-          <div class="gauge-value" id="steering-value">0</div>
-          <div class="gauge-label">STEERING</div>
+      <!-- 画面左右端のミニマルHUDインジケーター (極細白ライン) -->
+      <div class="hud-sidebar hud-sidebar-left">
+        <div class="slim-gauge-container">
+          <div class="slim-gauge-bar-track vertical">
+            <div class="slim-gauge-bar-fill" id="throttle-bar-fill"></div>
+            <div class="slim-gauge-center-line"></div>
+          </div>
+          <div class="slim-gauge-val" id="throttle-value">0%</div>
+          <div class="slim-gauge-label">THR</div>
         </div>
       </div>
-    </main>
-    
-    <!-- Keyboard Operation Guide -->
-    <footer class="footer">
-      <div class="key-guide">
-        <span>キー操作: <strong>↑/W</strong> 前進, <strong>↓/S</strong> 後退, <strong>←/A</strong> 左, <strong>→/D</strong> 右 (同時押し斜め走行可), <strong>Space</strong> 非常停止</span>
+
+      <div class="hud-sidebar hud-sidebar-right">
+        <div class="slim-gauge-container">
+          <div class="slim-gauge-bar-track horizontal">
+            <div class="slim-gauge-bar-fill" id="steering-bar-fill"></div>
+            <div class="slim-gauge-center-line horizontal-center"></div>
+          </div>
+          <div class="slim-gauge-val" id="steering-value">0%</div>
+          <div class="slim-gauge-label">STR</div>
+        </div>
       </div>
-      <button id="btn-about" class="btn text-btn">About & Specs</button>
-    </footer>
+
+      <!-- Center Dynamic Action Area (モード切替 & リセットボタン) -->
+      <div class="hud-center-actions">
+        <!-- 停止理由表示 (停止時のみ表示) -->
+        <div class="stop-reason-hud hidden" id="stop-reason-hud">
+          <span class="stop-reason-label">REASON:</span>
+          <span class="stop-reason-text" id="status-stop-reason">NONE</span>
+        </div>
+
+        <!-- メインモード切替ボタン -->
+        <button class="hud-action-btn" id="btn-drive-mode">
+          <span class="btn-text" id="btn-drive-mode-text">AUTO MODE</span>
+        </button>
+
+        <!-- 安全停止・非常停止からの復帰ボタン -->
+        <button class="hud-action-btn reset-action-btn hidden" id="btn-reset-stop">
+          <span class="btn-text" id="btn-reset-stop-text">RESET / RESUME</span>
+        </button>
+      </div>
+
+      <!-- Bottom Status Bar (操作ヒント) -->
+      <footer class="hud-bottom-bar">
+        <div class="touch-guide-text">
+          <span>LEFT: <strong>THROTTLE</strong></span>
+          <span class="separator">/</span>
+          <span>RIGHT: <strong>STEERING</strong></span>
+          <span class="separator">/</span>
+          <span class="desktop-guide">KEY: <strong>WASD</strong>, <strong>SPACE</strong> (STOP)</span>
+        </div>
+      </footer>
+    </div>
+
   </div>
+
+  <!-- 4. Overlays & Modals (モノクロ) -->
 
   <!-- TOR (Take Over Request) Overlay -->
   <div id="tor-overlay" class="tor-overlay hidden">
     <div class="tor-modal-card">
-      <div class="tor-icon">⚠️</div>
       <h2 class="tor-title">TAKE OVER REQUEST</h2>
-      <p class="tor-description">自動運転の継続が困難です。直ちに手動運転に引き継いでください！</p>
+      <p class="tor-description">自動運転の継続が困難です。手動操作へ引き継いでください。</p>
       <div class="tor-timer">
-        残り時間: <span id="tor-countdown">5.0</span> 秒
+        REMAINING: <span id="tor-countdown">5.0</span>s
       </div>
-      <button class="btn tor-takeover-btn" id="btn-tor-takeover">手動操作へ切り替える (Take Over)</button>
+      <button class="btn tor-takeover-btn" id="btn-tor-takeover">TAKE OVER</button>
     </div>
   </div>
 
@@ -103,27 +173,49 @@
   <div id="disconnected-overlay" class="disconnected-overlay hidden">
     <div class="disconnected-modal-card">
       <div class="spinner"></div>
-      <h2>マイコン通信切断</h2>
-      <p>WebSocket (ws://localhost:8765) に再接続を試行しています...</p>
-      <p class="sub-text">マイコンまたは mock_server.py が起動しているか確認してください</p>
+      <h2>DISCONNECTED</h2>
+      <p>WebSocket (ws://localhost:8765) に再接続中...</p>
+      <p class="sub-text">マイコンまたは mock_server.py の起動を確認してください</p>
     </div>
   </div>
 
-  <!-- About Modal -->
+  <!-- Camera Settings Modal -->
+  <div id="camera-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>CAMERA STREAM SETTINGS</h2>
+      <p class="modal-desc">車載マイコンまたは外部カメラのMJPEGストリームURLを指定できます。</p>
+
+      <div class="form-group" id="camera-url-group">
+        <label for="camera-url-input">STREAM URL:</label>
+        <input type="text" id="camera-url-input" class="custom-input" placeholder="/video_feed" value="/video_feed">
+        <small class="input-hint">標準: /video_feed, または http://192.168.4.1:81/stream 等</small>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" id="btn-save-camera">SAVE</button>
+        <button class="btn btn-secondary" id="btn-close-camera">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- About / Specs Modal -->
   <div id="about-modal" class="modal hidden">
     <div class="modal-content">
-      <h2>About ミニ四駆自動運転 WebApp</h2>
-      <p>WebSocket 経由で車載マイコンと 100ms 周期で双方向通信を行う制御ダッシュボードです。</p>
+      <h2>ABOUT CONTROLLER</h2>
+      <p class="modal-desc">ミニ四駆 FPV コントローラー WebApp</p>
       <ul>
-        <li><strong>Source of Truth:</strong> 車載マイコンの確定状態を同期表示</li>
-        <li><strong>2軸独立制御:</strong> 前後スロットルと左右ステアリングの並行操作</li>
-        <li><strong>TOR安全機構:</strong> 猶予カウントダウン & 自動フェイルセーフ</li>
+        <li><strong>FPV VIEW:</strong> 車載マイコンからのリアルタイム映像ストリーム (/video_feed)</li>
+        <li><strong>BLIND TOUCH:</strong> 画面を見ずに左親指でスロットル、右親指でステアリング操作</li>
+        <li><strong>SOURCE OF TRUTH:</strong> マイコン確定状態を同期 (100ms)</li>
       </ul>
-      <br>
-      <button class="btn" id="btn-close-about">Close</button>
+      <div class="modal-actions">
+        <button class="btn" id="btn-close-about">CLOSE</button>
+      </div>
     </div>
   </div>
 
   <script src="app.js"></script>
 </body>
 </html>
+
+

@@ -5,6 +5,7 @@ import json
 import os
 import struct
 import sys
+import zlib
 
 # RFC 6455 WebSocket GUID
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -25,6 +26,108 @@ MIME_TYPES = {
     ".txt": "text/plain; charset=utf-8",
 }
 
+class CameraStreamGenerator:
+    """
+    車載広角カメラの映像をエミュレートするフレーム生成器
+    マイコンの制御状態（スロットル、ステアリング、障害物距離）と同期した
+    モノクロカメラ映像フレーム（PNG/JPEG）を高速生成してストリーミング出力します。
+    """
+    def __init__(self, width=320, height=180):
+        self.width = width
+        self.height = height
+        self.frame_count = 0
+        self.road_offset = 0.0
+        self.lateral_offset = 0.0
+
+    def generate_frame(self, state: dict, throttle: float = 0.0, steering: float = 0.0) -> bytes:
+        w = self.width
+        h = self.height
+        self.frame_count += 1
+
+        mode = state.get("mode", "MANUAL")
+        dist = state.get("front_distance_mm", 1200)
+
+        if mode == "AUTO":
+            speed = 0.8
+            steer = 0.0
+        elif mode == "MANUAL":
+            speed = throttle
+            steer = steering
+        else: # SAFE_STOP, EMERGENCY_STOP
+            speed = 0.0
+            steer = 0.0
+
+        self.road_offset = (self.road_offset + speed * 6.0) % 40.0
+        self.lateral_offset += (steer * 20.0 - self.lateral_offset) * 0.15
+
+        horizon_y = int(h * 0.52)
+        track_top_w = 16
+        track_bottom_w = int(w * 0.72)
+        vanish_x = int(w / 2 + self.lateral_offset)
+
+        raw = bytearray((w + 1) * h)
+
+        for y in range(h):
+            row_start = y * (w + 1)
+            raw[row_start] = 0  # Filter type 0 (None)
+
+            if y < horizon_y:
+                # Sky
+                for x in range(w):
+                    raw[row_start + 1 + x] = 0
+            elif y == horizon_y:
+                # Horizon line
+                for x in range(w):
+                    raw[row_start + 1 + x] = 60
+            else:
+                dy = y - horizon_y
+                ratio = dy / (h - horizon_y)
+                current_track_w = int(track_top_w + ratio * (track_bottom_w - track_top_w))
+                curr_vanish_x = int(vanish_x * (1.0 - ratio) + (w / 2) * ratio)
+
+                left_x = curr_vanish_x - current_track_w // 2
+                right_x = curr_vanish_x + current_track_w // 2
+                center_x = curr_vanish_x
+
+                for x in range(w):
+                    val = 15
+
+                    if left_x <= x <= right_x:
+                        val = 30
+
+                    if abs(x - left_x) <= 1 or abs(x - right_x) <= 1:
+                        val = 220
+                    elif abs(x - center_x) <= 1 and ((int(y + self.road_offset)) // 8) % 2 == 0:
+                        val = 180
+
+                    if dist < 2000:
+                        dist_norm = max(0.05, min(1.0, dist / 2000.0))
+                        obs_y = horizon_y + int((1.0 - dist_norm) * (h * 0.42))
+                        obs_w = int(16 + (1.0 - dist_norm) * 70)
+                        obs_h = int(8 + (1.0 - dist_norm) * 26)
+                        obs_center_x = int(vanish_x * (1.0 - (1.0 - dist_norm)))
+
+                        if obs_y <= y <= obs_y + obs_h:
+                            if abs(x - obs_center_x) <= obs_w // 2:
+                                if y == obs_y or y == obs_y + obs_h or abs(x - obs_center_x) >= obs_w // 2 - 1:
+                                    val = 255
+
+                    raw[row_start + 1 + x] = val
+
+        sig = b'\x89PNG\r\n\x1a\n'
+        ihdr_data = struct.pack('!IIBBBBB', w, h, 8, 0, 0, 0, 0)
+        ihdr_crc = zlib.crc32(b'IHDR' + ihdr_data)
+        ihdr = struct.pack('!I4s', 13, b'IHDR') + ihdr_data + struct.pack('!I', ihdr_crc)
+
+        compressed = zlib.compress(bytes(raw), 1)
+        idat_crc = zlib.crc32(b'IDAT' + compressed)
+        idat = struct.pack('!I4s', len(compressed), b'IDAT') + compressed + struct.pack('!I', idat_crc)
+
+        iend_crc = zlib.crc32(b'IEND')
+        iend = struct.pack('!I4s', 0, b'IEND') + struct.pack('!I', iend_crc)
+
+        return sig + ihdr + idat + iend
+
 class Mini4WDMockServer:
     def __init__(self, host="0.0.0.0", port=8765, scenarios_file="mock_scenarios.json"):
         self.host = host
@@ -42,6 +145,13 @@ class Mini4WDMockServer:
             "request_reject_reason": "NONE",
             "heartbeat_seq": 0
         }
+
+        # Latest client control inputs
+        self.client_throttle = 0.0
+        self.client_steering = 0.0
+
+        # Camera Stream Generator
+        self.camera = CameraStreamGenerator(width=320, height=180)
         
         self.scenario = "manual_ready"
         self.load_scenarios()
@@ -240,14 +350,63 @@ class Mini4WDMockServer:
                 print(f"\n[WS Disconnected] {addr}")
             return
 
-        # 2. HTTP Static File Request
+        # 2. Camera Stream Request (/video_feed or /stream) - MJPEG Streaming
+        if path in ("/video_feed", "/stream"):
+            print(f"[Camera Stream Connected] {addr}")
+            mjpeg_header = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n"
+                "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+                "Pragma: no-cache\r\n"
+                "Expires: 0\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8")
+
+            writer.write(mjpeg_header)
+            await writer.drain()
+
+            try:
+                while True:
+                    frame_data = self.camera.generate_frame(
+                        self.state,
+                        self.client_throttle,
+                        self.client_steering
+                    )
+                    header_str = f"--frame\r\nContent-Type: image/png\r\nContent-Length: {len(frame_data)}\r\n\r\n"
+                    writer.write(header_str.encode("utf-8") + frame_data + b"\r\n")
+                    await writer.drain()
+                    await asyncio.sleep(0.04) # 25 FPS
+            except Exception:
+                pass
+            finally:
+                writer.close()
+                print(f"[Camera Stream Closed] {addr}")
+            return
+
+        # 3. Camera Snapshot (/snapshot)
+        if path == "/snapshot":
+            frame_data = self.camera.generate_frame(self.state, self.client_throttle, self.client_steering)
+            res = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: image/png\r\n"
+                f"Content-Length: {len(frame_data)}\r\n"
+                "Cache-Control: no-cache\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8") + frame_data
+            writer.write(res)
+            await writer.drain()
+            writer.close()
+            return
+
+        # 4. HTTP Static File Request
         if path == "/" or path == "":
             rel_path = "index.html"
         else:
             rel_path = path.lstrip("/")
 
         file_path = os.path.normpath(os.path.join(BASE_DIR, rel_path))
-        # Prevent directory traversal
         if not file_path.startswith(BASE_DIR) or not os.path.isfile(file_path):
             not_found_body = b"404 Not Found"
             res = (
@@ -302,6 +461,8 @@ class Mini4WDMockServer:
             self.state["stop_reason"] = "EMERGENCY_BUTTON"
             self.state["tor_active"] = False
             self.state["tor_remaining_ms"] = 0
+            self.client_throttle = 0.0
+            self.client_steering = 0.0
             print("[MCU] -> EMERGENCY_STOP triggered by WebApp!")
             return
 
@@ -334,14 +495,15 @@ class Mini4WDMockServer:
             self.state["request_reject_reason"] = "NONE"
             print("[MCU] -> Mode changed: AUTO -> MANUAL (Manual takeover)")
 
-        # 4. Driving Command logging
+        # 4. Driving Command updating
         throttle = cmd.get("throttle", 0.0)
         steering = cmd.get("steering", 0.0)
-        if throttle != 0 or steering != 0:
-            if self.state["mode"] == "MANUAL":
-                pass # Driving accepted
-            else:
-                pass # Discarded (safe behavior)
+        if self.state["mode"] == "MANUAL":
+            self.client_throttle = throttle
+            self.client_steering = steering
+        else:
+            self.client_throttle = 0.0
+            self.client_steering = 0.0
 
     async def heartbeat_loop(self):
         while True:
@@ -355,6 +517,8 @@ class Mini4WDMockServer:
                     self.state["tor_remaining_ms"] = 0
                     self.state["mode"] = "SAFE_STOP"
                     self.state["stop_reason"] = "TOR_TIMEOUT"
+                    self.client_throttle = 0.0
+                    self.client_steering = 0.0
                     print("\n[MCU] -> TOR Timeout! Transitioned to SAFE_STOP.")
 
             payload = json.dumps(self.state)
@@ -377,8 +541,9 @@ class Mini4WDMockServer:
         loop = asyncio.get_event_loop()
         print("\n" + "="*50)
         print(f" Mini 4WD Mock MCU Server running on http://localhost:{self.port}")
-        print(f"   - WebApp URL:    http://localhost:{self.port}/")
-        print(f"   - WebSocket URL: ws://localhost:{self.port}/")
+        print(f"   - WebApp URL:      http://localhost:{self.port}/")
+        print(f"   - WebSocket URL:   ws://localhost:{self.port}/")
+        print(f"   - Camera Stream:   http://localhost:{self.port}/video_feed")
         print(" Interactive Keys: ")
         print("   [1] Manual Ready      [2] Auto Cruising")
         print("   [3] Trigger TOR (5s)  [4] Obstacle Stop")
@@ -406,7 +571,7 @@ class Mini4WDMockServer:
 
     async def main(self):
         server = await asyncio.start_server(self.handle_client, self.host, self.port)
-        print(f"[Ready] WebSocket Server started on {self.host}:{self.port}")
+        print(f"[Ready] Server started on {self.host}:{self.port}")
         await asyncio.gather(
             server.serve_forever(),
             self.heartbeat_loop(),
@@ -419,3 +584,4 @@ if __name__ == "__main__":
         asyncio.run(mock.main())
     except KeyboardInterrupt:
         print("\n[Shutdown] Server stopped.")
+
