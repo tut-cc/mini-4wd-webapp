@@ -1,7 +1,10 @@
 /**
  * 仮想ジョイスティック (Pointer Events API 対応)
- * タッチとマウスの両方を単一のイベントフローで高速・高精度に処理します。
+ * タッチとマウスの両方を単一のイベントフローで処理します。
  */
+
+const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+const applyDeadband = (val, db) => (Math.abs(val) < db ? 0.0 : val);
 
 export class VirtualStick {
     constructor({ zoneElement, baseElement, thumbElement, axis = 'y', maxDistance = 60, deadband = 0.05 }) {
@@ -28,9 +31,7 @@ export class VirtualStick {
             e.preventDefault();
 
             this.pointerId = e.pointerId;
-            try {
-                this.zone.setPointerCapture(e.pointerId);
-            } catch (_) {}
+            try { this.zone.setPointerCapture(e.pointerId); } catch (_) {}
 
             const rect = this.zone.getBoundingClientRect();
             this.base.style.left = `${e.clientX - rect.left}px`;
@@ -47,15 +48,10 @@ export class VirtualStick {
             e.preventDefault();
 
             const currentPos = (this.axis === 'y') ? e.clientY : e.clientX;
-            // Y軸: 上方向が正 (startY - currentY), X軸: 右方向が正 (currentX - startX)
             const delta = (this.axis === 'y') ? (this.startPos - currentPos) : (currentPos - this.startPos);
-            let norm = Math.max(-1.0, Math.min(1.0, delta / this.maxDist));
-            if (Math.abs(norm) < this.deadband) {
-                norm = 0.0;
-            }
+            this.value = applyDeadband(clamp(delta / this.maxDist, -1.0, 1.0), this.deadband);
 
-            this.value = norm;
-            const visualOffset = (this.axis === 'y' ? -norm : norm) * (this.maxDist * 0.5);
+            const visualOffset = (this.axis === 'y' ? -this.value : this.value) * (this.maxDist * 0.5);
             this.thumb.style.transform = (this.axis === 'y')
                 ? `translate(-50%, calc(-50% + ${visualOffset}px))`
                 : `translate(calc(-50% + ${visualOffset}px), -50%)`;
@@ -63,12 +59,7 @@ export class VirtualStick {
 
         const onEnd = (e) => {
             if (this.pointerId !== e.pointerId) return;
-            try {
-                if (this.zone.hasPointerCapture(e.pointerId)) {
-                    this.zone.releasePointerCapture(e.pointerId);
-                }
-            } catch (_) {}
-
+            try { this.zone.releasePointerCapture?.(e.pointerId); } catch (_) {}
             this.pointerId = null;
             this.value = 0.0;
             this.base.classList.add('hidden');
@@ -81,7 +72,7 @@ export class VirtualStick {
     reset() {
         this.pointerId = null;
         this.value = 0.0;
-        if (this.base) this.base.classList.add('hidden');
+        this.base?.classList.add('hidden');
     }
 
     isActive() {

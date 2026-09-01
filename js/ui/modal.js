@@ -25,23 +25,17 @@ export class ModalManager {
     }
 
     bindEvents() {
-        // Fullscreen
         on(this.btnFullscreen, 'click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else {
-                document.exitFullscreen().catch(() => {});
-            }
+            document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : document.documentElement.requestFullscreen().catch(() => {});
         });
 
-        // About Modal
         on(this.btnAbout, 'click', () => setHidden(this.aboutModal, false));
         on(this.btnCloseAbout, 'click', () => setHidden(this.aboutModal, true));
 
-        // Camera Modal
         on(this.btnCameraSettings, 'click', () => {
-            const currentUrl = localStorage.getItem(Config.STORAGE_KEY_CAMERA_URL) || Config.DEFAULT_CAMERA_URL;
-            if (this.cameraUrlInput) this.cameraUrlInput.value = currentUrl;
+            if (this.cameraUrlInput) {
+                this.cameraUrlInput.value = localStorage.getItem(Config.STORAGE_KEY_CAMERA_URL) || Config.DEFAULT_CAMERA_URL;
+            }
             setHidden(this.cameraModal, false);
         });
 

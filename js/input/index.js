@@ -10,7 +10,6 @@ export class InputController {
     constructor(onEmergencyStopCallback) {
         this.enabled = true;
 
-        // 仮想ジョイスティック (左: スロットル, 右: ステアリング)
         this.throttleStick = new VirtualStick({
             zoneElement: document.getElementById('touch-throttle-zone'),
             baseElement: document.getElementById('throttle-joystick-base'),
@@ -29,7 +28,6 @@ export class InputController {
             deadband: Config.INPUT_DEADBAND
         });
 
-        // キーボード
         this.keyboard = new KeyboardController({
             onEmergencyStop: onEmergencyStopCallback
         });
@@ -40,9 +38,7 @@ export class InputController {
         this.throttleStick.enabled = enabled;
         this.steeringStick.enabled = enabled;
         this.keyboard.enabled = enabled;
-        if (!enabled) {
-            this.reset();
-        }
+        if (!enabled) this.reset();
     }
 
     reset() {
@@ -53,17 +49,11 @@ export class InputController {
 
     getThrottle() {
         if (!this.enabled) return 0.0;
-        if (this.keyboard.isActive()) {
-            return this.keyboard.getThrottle();
-        }
-        return this.throttleStick.getValue();
+        return this.keyboard.isActive() ? this.keyboard.getThrottle() : this.throttleStick.getValue();
     }
 
     getSteering() {
         if (!this.enabled) return 0.0;
-        if (this.keyboard.isActive()) {
-            return this.keyboard.getSteering();
-        }
-        return this.steeringStick.getValue();
+        return this.keyboard.isActive() ? this.keyboard.getSteering() : this.steeringStick.getValue();
     }
 }

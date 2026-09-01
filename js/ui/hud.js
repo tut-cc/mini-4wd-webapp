@@ -56,23 +56,17 @@ export class HudManager {
         const isPending = (uiState === UIState.AUTO_PENDING || uiState === UIState.MANUAL_PENDING);
         const isAuto = (uiState === UIState.AUTO || uiState === UIState.AUTO_PENDING);
 
-        // 接続状態
+        // 接続状態 & オーバーレイ
         setText(this.wsStatusText, isDisconnected ? '未接続' : '接続中');
-        if (this.wsStatus) {
-            this.wsStatus.className = `hud-badge status-badge ${isDisconnected ? 'disconnected' : 'connected'}`;
-        }
-
-        // オーバーレイ
+        if (this.wsStatus) this.wsStatus.className = `hud-badge status-badge ${isDisconnected ? 'disconnected' : 'connected'}`;
         setHidden(this.disconnectedOverlay, !isDisconnected);
         setHidden(this.torOverlay, !isTor);
         if (isTor && mcuData?.tor_remaining_ms !== undefined) {
             setText(this.torCountdown, (mcuData.tor_remaining_ms / 1000).toFixed(1));
         }
 
-        // 前方障害物距離
+        // 前方距離 & 停止理由
         setText(this.distanceBadge, mcuData?.front_distance_mm ?? '--');
-
-        // 停止理由
         setHidden(this.stopReasonHud, !isStopped);
         if (isStopped) {
             const rawReason = mcuData?.stop_reason || StopReason.NONE;
@@ -107,16 +101,20 @@ export class HudManager {
 
         if (this.throttleBarFill) {
             const isFwd = throttle >= 0;
-            this.throttleBarFill.style.bottom = isFwd ? '50%' : 'auto';
-            this.throttleBarFill.style.top = isFwd ? 'auto' : '50%';
-            this.throttleBarFill.style.height = `${Math.abs(throttle) * 50}%`;
+            Object.assign(this.throttleBarFill.style, {
+                bottom: isFwd ? '50%' : 'auto',
+                top: isFwd ? 'auto' : '50%',
+                height: `${Math.abs(throttle) * 50}%`
+            });
         }
 
         if (this.steeringBarFill) {
             const isRight = steering >= 0;
-            this.steeringBarFill.style.left = isRight ? '50%' : 'auto';
-            this.steeringBarFill.style.right = isRight ? 'auto' : '50%';
-            this.steeringBarFill.style.width = `${Math.abs(steering) * 50}%`;
+            Object.assign(this.steeringBarFill.style, {
+                left: isRight ? '50%' : 'auto',
+                right: isRight ? 'auto' : '50%',
+                width: `${Math.abs(steering) * 50}%`
+            });
         }
 
         if (this.steeringGuideMarker) {
@@ -132,8 +130,6 @@ export class HudManager {
         setText(this.alertMessage, msg);
         setHidden(this.alertBanner, false);
         if (this.alertTimeout) clearTimeout(this.alertTimeout);
-        this.alertTimeout = setTimeout(() => {
-            setHidden(this.alertBanner, true);
-        }, Config.ALERT_DISPLAY_DURATION_MS);
+        this.alertTimeout = setTimeout(() => setHidden(this.alertBanner, true), Config.ALERT_DISPLAY_DURATION_MS);
     }
 }

@@ -22,16 +22,15 @@ export class CommManager {
     connect() {
         try {
             this.ws = new WebSocket(this.wsUrl);
-        } catch (e) {
+        } catch (_) {
             this.onConnectionLost();
-            setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
-            return;
+            return setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
         }
 
         this.ws.onopen = () => {
             this.connected = true;
             this.lastHeartbeatTime = Date.now();
-            if (this.callbacks.onConnect) this.callbacks.onConnect();
+            this.callbacks.onConnect?.();
         };
 
         this.ws.onmessage = (event) => {
@@ -40,9 +39,9 @@ export class CommManager {
                 this.lastHeartbeatTime = Date.now();
                 if (!this.connected) {
                     this.connected = true;
-                    if (this.callbacks.onConnect) this.callbacks.onConnect();
+                    this.callbacks.onConnect?.();
                 }
-                if (this.callbacks.onHeartbeat) this.callbacks.onHeartbeat(data);
+                this.callbacks.onHeartbeat?.(data);
             } catch (e) {
                 console.error('[CommManager] Invalid Heartbeat JSON:', e);
             }
@@ -53,15 +52,13 @@ export class CommManager {
             setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
         };
 
-        this.ws.onerror = () => {
-            this.onConnectionLost();
-        };
+        this.ws.onerror = () => this.onConnectionLost();
     }
 
     onConnectionLost() {
         if (this.connected) {
             this.connected = false;
-            if (this.callbacks.onDisconnect) this.callbacks.onDisconnect();
+            this.callbacks.onDisconnect?.();
         }
     }
 
@@ -71,11 +68,9 @@ export class CommManager {
                 this.onConnectionLost();
             }
 
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                const payload = this.callbacks.getTransmitPayload();
-                if (payload) {
-                    this.ws.send(JSON.stringify(payload));
-                }
+            if (this.ws?.readyState === WebSocket.OPEN) {
+                const payload = this.callbacks.getTransmitPayload?.();
+                if (payload) this.ws.send(JSON.stringify(payload));
             }
         }, Config.TRANSMIT_INTERVAL_MS);
     }

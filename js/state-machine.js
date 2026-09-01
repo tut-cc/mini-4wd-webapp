@@ -13,6 +13,16 @@ import {
     Config
 } from './constants.js';
 
+const CLIENT_MODE_MAP = {
+    [UIState.MANUAL]: ClientMode.MANUAL,
+    [UIState.AUTO_PENDING]: ClientMode.MANUAL,
+    [UIState.AUTO]: ClientMode.AUTO,
+    [UIState.MANUAL_PENDING]: ClientMode.AUTO,
+    [UIState.AUTO_TOR]: ClientMode.AUTO,
+    [UIState.SAFE_STOP]: ClientMode.SAFE_STOP,
+    [UIState.EMERGENCY_STOP]: ClientMode.EMERGENCY_STOP
+};
+
 export class StateMachine {
     constructor(app) {
         this.app = app;
@@ -35,30 +45,15 @@ export class StateMachine {
     }
 
     getClientMode() {
-        switch (this.currentState) {
-            case UIState.MANUAL:
-            case UIState.AUTO_PENDING:
-                return ClientMode.MANUAL;
-            case UIState.AUTO:
-            case UIState.MANUAL_PENDING:
-            case UIState.AUTO_TOR:
-                return ClientMode.AUTO;
-            case UIState.SAFE_STOP:
-                return ClientMode.SAFE_STOP;
-            case UIState.EMERGENCY_STOP:
-                return ClientMode.EMERGENCY_STOP;
-            default:
-                return ClientMode.MANUAL;
-        }
+        return CLIENT_MODE_MAP[this.currentState] ?? ClientMode.MANUAL;
     }
 
     getTransmitPayload() {
-        const isManualDriving = (this.currentState === UIState.MANUAL);
-
+        const isManual = (this.currentState === UIState.MANUAL);
         const payload = {
             client_mode: this.getClientMode(),
-            throttle: isManualDriving ? this.app.input.getThrottle() : 0.0,
-            steering: isManualDriving ? this.app.input.getSteering() : 0.0,
+            throttle: isManual ? this.app.input.getThrottle() : 0.0,
+            steering: isManual ? this.app.input.getSteering() : 0.0,
             mode_request: this.pendingModeRequest,
             emergency_stop_request: this.pendingEmergencyStop,
             reset_stop_request: this.pendingResetStop
@@ -67,7 +62,6 @@ export class StateMachine {
         this.pendingModeRequest = ModeRequest.NONE;
         this.pendingEmergencyStop = false;
         this.pendingResetStop = false;
-
         return payload;
     }
 
@@ -80,20 +74,17 @@ export class StateMachine {
         }
 
         if (this.currentState === UIState.DISCONNECTED) {
-            this.transitionToMCUState();
-            return;
+            return this.transitionToMCUState();
         }
 
         if (this.currentState === UIState.AUTO_PENDING) {
             if (data.mode === MCUMode.AUTO) {
                 this.clearPendingTimer();
-                this.transitionTo(data.tor_active ? UIState.AUTO_TOR : UIState.AUTO);
-                return;
+                return this.transitionTo(data.tor_active ? UIState.AUTO_TOR : UIState.AUTO);
             }
             if (data.request_reject_reason !== RejectReason.NONE || data.mode !== MCUMode.MANUAL) {
                 this.clearPendingTimer();
-                this.transitionToMCUState();
-                return;
+                return this.transitionToMCUState();
             }
             return;
         }
@@ -101,13 +92,11 @@ export class StateMachine {
         if (this.currentState === UIState.MANUAL_PENDING) {
             if (data.mode === MCUMode.MANUAL) {
                 this.clearPendingTimer();
-                this.transitionTo(UIState.MANUAL);
-                return;
+                return this.transitionTo(UIState.MANUAL);
             }
             if (data.mode !== MCUMode.AUTO) {
                 this.clearPendingTimer();
-                this.transitionToMCUState();
-                return;
+                return this.transitionToMCUState();
             }
             return;
         }
@@ -116,32 +105,16 @@ export class StateMachine {
     }
 
     transitionToMCUState() {
-        const mode = this.mcuData.mode;
-
-        if (mode === MCUMode.EMERGENCY_STOP) {
-            this.transitionTo(UIState.EMERGENCY_STOP);
-        } else if (mode === MCUMode.SAFE_STOP) {
-            this.transitionTo(UIState.SAFE_STOP);
-        } else if (mode === MCUMode.AUTO) {
-            if (this.mcuData.tor_active) {
-                this.transitionTo(UIState.AUTO_TOR);
-            } else {
-                this.transitionTo(UIState.AUTO);
-            }
-        } else if (mode === MCUMode.MANUAL) {
-            this.transitionTo(UIState.MANUAL);
-        }
+        const { mode, tor_active } = this.mcuData;
+        if (mode === MCUMode.EMERGENCY_STOP) return this.transitionTo(UIState.EMERGENCY_STOP);
+        if (mode === MCUMode.SAFE_STOP) return this.transitionTo(UIState.SAFE_STOP);
+        if (mode === MCUMode.AUTO) return this.transitionTo(tor_active ? UIState.AUTO_TOR : UIState.AUTO);
+        this.transitionTo(UIState.MANUAL);
     }
 
     transitionTo(newState) {
         this.currentState = newState;
-
-        if (newState === UIState.MANUAL) {
-            this.app.input.setEnabled(true);
-        } else {
-            this.app.input.setEnabled(false);
-        }
-
+        this.app.input.setEnabled(newState === UIState.MANUAL);
         this.app.ui.renderState(this.currentState, this.mcuData);
     }
 

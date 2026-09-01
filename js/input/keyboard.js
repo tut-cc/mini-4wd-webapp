@@ -2,18 +2,18 @@
  * キーボード入力制御
  */
 
+const KEY_MAP = {
+    ArrowUp: 'up', w: 'up', W: 'up',
+    ArrowDown: 'down', s: 'down', S: 'down',
+    ArrowLeft: 'left', a: 'left', A: 'left',
+    ArrowRight: 'right', d: 'right', D: 'right'
+};
+
 export class KeyboardController {
     constructor({ onEmergencyStop } = {}) {
         this.onEmergencyStop = onEmergencyStop;
         this.enabled = true;
-
-        this.keys = {
-            up: false,
-            down: false,
-            left: false,
-            right: false
-        };
-
+        this.keys = { up: false, down: false, left: false, right: false };
         this.throttle = 0.0;
         this.steering = 0.0;
         this.active = false;
@@ -24,63 +24,34 @@ export class KeyboardController {
     initEvents() {
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
-
             if (e.code === 'Space') {
                 e.preventDefault();
-                this.onEmergencyStop?.();
-                return;
+                return this.onEmergencyStop?.();
             }
-
-            if (this.handleKey(e.key, true)) {
-                e.preventDefault();
-            }
+            if (this.handleKey(e.key, true)) e.preventDefault();
         });
 
         window.addEventListener('keyup', (e) => {
-            if (this.handleKey(e.key, false)) {
-                e.preventDefault();
-            }
+            if (this.handleKey(e.key, false)) e.preventDefault();
         });
     }
 
     handleKey(key, isDown) {
-        let handled = false;
-        if (key === 'ArrowUp' || key === 'w' || key === 'W') {
-            this.keys.up = isDown;
-            handled = true;
-        } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
-            this.keys.down = isDown;
-            handled = true;
-        } else if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
-            this.keys.left = isDown;
-            handled = true;
-        } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
-            this.keys.right = isDown;
-            handled = true;
-        }
-
-        if (handled) {
-            this.update();
-        }
-        return handled;
+        const action = KEY_MAP[key];
+        if (!action) return false;
+        this.keys[action] = isDown;
+        this.update();
+        return true;
     }
 
     update() {
-        const fwd = this.keys.up ? 1.0 : 0.0;
-        const rev = this.keys.down ? 1.0 : 0.0;
-        const right = this.keys.right ? 1.0 : 0.0;
-        const left = this.keys.left ? 1.0 : 0.0;
-
-        this.throttle = fwd - rev;
-        this.steering = right - left;
-        this.active = this.keys.up || this.keys.down || this.keys.left || this.keys.right;
+        this.throttle = (this.keys.up ? 1.0 : 0.0) - (this.keys.down ? 1.0 : 0.0);
+        this.steering = (this.keys.right ? 1.0 : 0.0) - (this.keys.left ? 1.0 : 0.0);
+        this.active = Object.values(this.keys).some(Boolean);
     }
 
     reset() {
-        this.keys.up = false;
-        this.keys.down = false;
-        this.keys.left = false;
-        this.keys.right = false;
+        Object.keys(this.keys).forEach((k) => (this.keys[k] = false));
         this.throttle = 0.0;
         this.steering = 0.0;
         this.active = false;
