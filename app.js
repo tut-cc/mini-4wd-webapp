@@ -1,29 +1,15 @@
 /*
- * MIT License
- * 
- * Copyright (c) 2022 Covao / Koichi Kobayashi (Original DonkeyCopilot)
- * Copyright (c) 2026 (Mini 4WD Copilot)
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * ミニ四駆自動運転 WebApp (Client Controller)
+ * WebSocket (ws://localhost:8765) 経由で車載マイコンと100ms周期で双方向通信
  */
 
 // DOM Elements
+const wsStatus = document.getElementById('ws-status');
+const modeBadge = document.getElementById('mode-badge');
+const distanceBadge = document.getElementById('distance-badge');
+const fpsCounter = document.getElementById('fps-counter');
+const gamepadStatus = document.getElementById('gamepad-status');
+
 const throttleSlider = document.getElementById('throttle-slider');
 const steeringSlider = document.getElementById('steering-slider');
 const throttleValue = document.getElementById('throttle-value');
@@ -31,268 +17,460 @@ const steeringValue = document.getElementById('steering-value');
 const throttleGauge = document.getElementById('throttle-gauge');
 const steeringPointer = document.getElementById('steering-pointer');
 
+const statusModeText = document.getElementById('status-mode-text');
+const statusDistanceText = document.getElementById('status-distance-text');
+const statusStopReason = document.getElementById('status-stop-reason');
+const stopReasonLine = document.getElementById('stop-reason-line');
+
 const btnDriveMode = document.getElementById('btn-drive-mode');
-const btnRec = document.getElementById('btn-rec');
-const btnAutoRec = document.getElementById('btn-auto-rec');
+const btnEmergencyStop = document.getElementById('btn-emergency-stop');
+const btnResetStop = document.getElementById('btn-reset-stop');
 const btnFullscreen = document.getElementById('btn-fullscreen');
 const btnAbout = document.getElementById('btn-about');
 const btnCloseAbout = document.getElementById('btn-close-about');
 const aboutModal = document.getElementById('about-modal');
 
-const fpsCounter = document.getElementById('fps-counter');
-const gamepadStatus = document.getElementById('gamepad-status');
+const alertBanner = document.getElementById('alert-banner');
+const alertMessage = document.getElementById('alert-message');
 
-// State
-let state = {
-    throttle: 0,
-    steering: 0,
-    driveMode: 'user', // 'user', 'local', 'local_angle'
-    isRecording: false,
-    isAutoRec: false,
-    maxAccel: 100,
-    lastFrameTime: performance.now(),
+const torOverlay = document.getElementById('tor-overlay');
+const torCountdown = document.getElementById('tor-countdown');
+const btnTorTakeover = document.getElementById('btn-tor-takeover');
+
+const disconnectedOverlay = document.getElementById('disconnected-overlay');
+
+// Application State
+let appState = {
+    // Current recognized mode (WebApp's view)
+    clientMode: 'MANUAL', // 'MANUAL', 'AUTO', 'SAFE_STOP', 'EMERGENCY_STOP'
+    
+    // Server's authoritative mode (Source of Truth)
+    mcuMode: 'MANUAL',
+    frontDistanceMm: 1200,
+    torActive: false,
+    torRemainingMs: 0,
+    stopReason: 'NONE',
+    requestRejectReason: 'NONE',
+
+    // Control inputs (-1.0 to 1.0)
+    throttle: 0.0,
+    steering: 0.0,
+
+    // One-shot requests
+    modeRequest: 'NONE', // 'NONE', 'MANUAL', 'AUTO'
+    emergencyStopRequest: false,
+    resetStopRequest: false,
+
+    // UI Pending states
+    pendingMode: null,
+    pendingTimer: null,
+
+    // Connectivity
+    connected: false,
+    lastHeartbeatTime: 0,
+
+    // Performance
     frameCount: 0,
-    fps: 0,
-    buttonX0: false,
-    buttonB0: false
+    lastFrameTime: performance.now(),
+    fps: 60
 };
 
-// WebSocket Mock
-let wsMock = {
-    send: (data) => {
-        // console.log("WS Send:", data); // Uncomment for debugging
+// Keyboard state for smooth 2-axis control
+const keysPressed = {
+    up: false,
+    down: false,
+    left: false,
+    right: false
+};
+
+// WebSocket Management
+let ws = null;
+const WS_PORT = 8765;
+const WS_URL = `ws://${location.hostname || 'localhost'}:${WS_PORT}`;
+
+function connectWebSocket() {
+    try {
+        ws = new WebSocket(WS_URL);
+    } catch (e) {
+        setDisconnectedUI();
+        setTimeout(connectWebSocket, 2000);
+        return;
     }
-};
 
-// Initialize
-function init() {
-    setupEventListeners();
-    requestAnimationFrame(gameLoop);
+    ws.onopen = () => {
+        appState.connected = true;
+        appState.lastHeartbeatTime = Date.now();
+        wsStatus.textContent = "WS: 接続中 (ONLINE)";
+        wsStatus.className = "status-badge connected";
+        disconnectedOverlay.classList.add('hidden');
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            handleHeartbeat(data);
+        } catch (e) {
+            console.error("Invalid WS message:", e);
+        }
+    };
+
+    ws.onclose = () => {
+        setDisconnectedUI();
+        setTimeout(connectWebSocket, 1500);
+    };
+
+    ws.onerror = () => {
+        setDisconnectedUI();
+    };
+}
+
+function setDisconnectedUI() {
+    appState.connected = false;
+    wsStatus.textContent = "WS: 未接続 (OFFLINE)";
+    wsStatus.className = "status-badge disconnected";
+    disconnectedOverlay.classList.remove('hidden');
+}
+
+// Handle authoritative Heartbeat from MCU
+function handleHeartbeat(data) {
+    appState.lastHeartbeatTime = Date.now();
+    appState.mcuMode = data.mode || 'MANUAL';
+    appState.clientMode = appState.mcuMode;
+    appState.frontDistanceMm = data.front_distance_mm ?? 1200;
+    appState.torActive = !!data.tor_active;
+    appState.torRemainingMs = data.tor_remaining_ms || 0;
+    appState.stopReason = data.stop_reason || 'NONE';
+    appState.requestRejectReason = data.request_reject_reason || 'NONE';
+
+    // Clear Pending if mode changed or rejected
+    if (appState.pendingMode) {
+        if (appState.mcuMode === appState.pendingMode || appState.requestRejectReason !== 'NONE') {
+            clearTimeout(appState.pendingTimer);
+            appState.pendingMode = null;
+        }
+    }
+
+    // Show reject reason alert if any
+    if (appState.requestRejectReason !== 'NONE') {
+        showErrorMessage(`要求拒否: ${getRejectReasonText(appState.requestRejectReason)}`);
+    }
+
+    updateUIFromState();
+}
+
+function getRejectReasonText(reason) {
+    switch (reason) {
+        case 'OBSTACLE_NEAR': return '前方に障害物を検知しています';
+        case 'SENSOR_NOT_READY': return 'センサーが準備完了していません';
+        case 'IN_TOR': return '引継ぎ要求(TOR)発生中です';
+        case 'IN_EMERGENCY': return '非常停止中です';
+        case 'MODE_MISMATCH': return '車両の状態と一致しない操作です';
+        default: return reason;
+    }
+}
+
+function showErrorMessage(msg) {
+    alertMessage.textContent = msg;
+    alertBanner.classList.remove('hidden');
+    setTimeout(() => {
+        alertBanner.classList.add('hidden');
+    }, 3000);
+}
+
+// Update UI Components
+function updateUIFromState() {
+    // 1. Badges & Text
+    modeBadge.textContent = `MODE: ${appState.mcuMode}`;
+    modeBadge.className = `status-badge mode-badge mode-${appState.mcuMode.toLowerCase().replace('_', '')}`;
+    
+    distanceBadge.textContent = `前方距離: ${appState.frontDistanceMm} mm`;
+    statusModeText.textContent = appState.mcuMode;
+    statusDistanceText.textContent = `${appState.frontDistanceMm} mm`;
+    statusStopReason.textContent = appState.stopReason;
+
+    // 2. Mode & Action Buttons
+    if (appState.mcuMode === 'MANUAL') {
+        btnDriveMode.classList.remove('hidden', 'auto-mode', 'pending');
+        btnDriveMode.textContent = appState.pendingMode === 'AUTO' ? '切替中 (Pending)...' : 'Auto Mode へ切替';
+        btnDriveMode.disabled = !!appState.pendingMode;
+        btnResetStop.classList.add('hidden');
+
+        throttleSlider.disabled = false;
+        steeringSlider.disabled = false;
+    } else if (appState.mcuMode === 'AUTO') {
+        btnDriveMode.classList.remove('hidden', 'pending');
+        btnDriveMode.classList.add('auto-mode');
+        btnDriveMode.textContent = appState.pendingMode === 'MANUAL' ? '切替中 (Pending)...' : 'Manual Mode へ切替';
+        btnDriveMode.disabled = !!appState.pendingMode;
+        btnResetStop.classList.add('hidden');
+
+        throttleSlider.disabled = true;
+        steeringSlider.disabled = true;
+    } else if (appState.mcuMode === 'SAFE_STOP' || appState.mcuMode === 'EMERGENCY_STOP') {
+        btnDriveMode.classList.add('hidden');
+        btnResetStop.classList.remove('hidden');
+        btnResetStop.textContent = appState.mcuMode === 'EMERGENCY_STOP' ? '🚨 安全確認・非常停止を解除' : '手動モードで再開 (リセット)';
+
+        throttleSlider.disabled = true;
+        steeringSlider.disabled = true;
+    }
+
+    // 3. TOR Overlay
+    if (appState.torActive && appState.mcuMode === 'AUTO') {
+        torOverlay.classList.remove('hidden');
+        const sec = (appState.torRemainingMs / 1000).toFixed(1);
+        torCountdown.textContent = sec;
+    } else {
+        torOverlay.classList.add('hidden');
+    }
+
+    // 4. Update Gauges
+    renderGauges();
+}
+
+function renderGauges() {
+    let tVal = Math.round(appState.throttle * 100);
+    let sVal = Math.round(appState.steering * 100);
+    
+    throttleValue.textContent = tVal;
+    steeringValue.textContent = sVal;
+
+    // Throttle gauge fill (arc offset)
+    const maxOffset = 125;
+    let offset = maxOffset - (Math.abs(appState.throttle) * maxOffset);
+    throttleGauge.style.strokeDashoffset = offset;
+    
+    if (appState.throttle < 0) {
+        throttleGauge.style.stroke = "var(--accent-red)";
+    } else if (appState.throttle > 0.8) {
+        throttleGauge.style.stroke = "var(--accent-orange)";
+    } else {
+        throttleGauge.style.stroke = "var(--accent-blue)";
+    }
+
+    // Steering pointer angle (-45 to 45 deg)
+    const rot = appState.steering * 45;
+    steeringPointer.style.transform = `rotate(${rot}deg)`;
+}
+
+// Send Command via WebSocket (100ms interval)
+function sendCommandLoop() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        const payload = {
+            client_mode: appState.clientMode,
+            throttle: appState.mcuMode === 'MANUAL' ? appState.throttle : 0.0,
+            steering: appState.mcuMode === 'MANUAL' ? appState.steering : 0.0,
+            mode_request: appState.modeRequest,
+            emergency_stop_request: appState.emergencyStopRequest,
+            reset_stop_request: appState.resetStopRequest
+        };
+
+        ws.send(JSON.stringify(payload));
+
+        // Reset one-shot flags
+        appState.modeRequest = 'NONE';
+        appState.emergencyStopRequest = false;
+        appState.resetStopRequest = false;
+    }
+
+    // Heartbeat timeout check (1.5 seconds)
+    if (appState.connected && Date.now() - appState.lastHeartbeatTime > 1500) {
+        setDisconnectedUI();
+    }
+}
+
+// --- Keyboard & Input Handling (2-Axis Independent Control) ---
+function updateKeyboardInputs() {
+    if (appState.mcuMode !== 'MANUAL') return;
+
+    let targetThrottle = 0.0;
+    let targetSteering = 0.0;
+
+    if (keysPressed.up && !keysPressed.down) targetThrottle = 1.0;
+    if (keysPressed.down && !keysPressed.up) targetThrottle = -1.0;
+
+    if (keysPressed.left && !keysPressed.right) targetSteering = -1.0;
+    if (keysPressed.right && !keysPressed.left) targetSteering = 1.0;
+
+    // Only override sliders if keyboard is being actively pressed
+    const isKeyboardActive = keysPressed.up || keysPressed.down || keysPressed.left || keysPressed.right;
+    if (isKeyboardActive) {
+        appState.throttle = targetThrottle;
+        appState.steering = targetSteering;
+        throttleSlider.value = targetThrottle;
+        steeringSlider.value = targetSteering;
+    }
 }
 
 function setupEventListeners() {
     // Sliders
-    throttleSlider.addEventListener('input', updateStateFromUI);
-    throttleSlider.addEventListener('change', () => resetSlider(throttleSlider, 'throttle'));
-    throttleSlider.addEventListener('mouseup', () => resetSlider(throttleSlider, 'throttle'));
-    throttleSlider.addEventListener('touchend', () => resetSlider(throttleSlider, 'throttle'));
+    throttleSlider.addEventListener('input', () => {
+        appState.throttle = parseFloat(throttleSlider.value);
+    });
+    throttleSlider.addEventListener('change', () => {
+        throttleSlider.value = 0;
+        appState.throttle = 0;
+    });
+    throttleSlider.addEventListener('mouseup', () => {
+        throttleSlider.value = 0;
+        appState.throttle = 0;
+    });
+    throttleSlider.addEventListener('touchend', () => {
+        throttleSlider.value = 0;
+        appState.throttle = 0;
+    });
 
-    steeringSlider.addEventListener('input', updateStateFromUI);
-    steeringSlider.addEventListener('change', () => resetSlider(steeringSlider, 'steering'));
-    steeringSlider.addEventListener('mouseup', () => resetSlider(steeringSlider, 'steering'));
-    steeringSlider.addEventListener('touchend', () => resetSlider(steeringSlider, 'steering'));
+    steeringSlider.addEventListener('input', () => {
+        appState.steering = parseFloat(steeringSlider.value);
+    });
+    steeringSlider.addEventListener('change', () => {
+        steeringSlider.value = 0;
+        appState.steering = 0;
+    });
+    steeringSlider.addEventListener('mouseup', () => {
+        steeringSlider.value = 0;
+        appState.steering = 0;
+    });
+    steeringSlider.addEventListener('touchend', () => {
+        steeringSlider.value = 0;
+        appState.steering = 0;
+    });
 
     // Buttons
-    btnDriveMode.addEventListener('click', toggleDriveMode);
-    btnRec.addEventListener('click', toggleRec);
-    btnAutoRec.addEventListener('click', toggleAutoRec);
-    btnFullscreen.addEventListener('click', toggleFullscreen);
+    btnDriveMode.addEventListener('click', () => {
+        if (appState.pendingMode) return;
+        const req = appState.mcuMode === 'MANUAL' ? 'AUTO' : 'MANUAL';
+        appState.modeRequest = req;
+        appState.pendingMode = req;
+        btnDriveMode.textContent = '切替中 (Pending)...';
+        btnDriveMode.classList.add('pending');
+
+        appState.pendingTimer = setTimeout(() => {
+            if (appState.pendingMode) {
+                showErrorMessage('モード切替がタイムアウトしました');
+                appState.pendingMode = null;
+                updateUIFromState();
+            }
+        }, 1000);
+    });
+
+    btnEmergencyStop.addEventListener('click', () => {
+        appState.emergencyStopRequest = true;
+    });
+
+    btnResetStop.addEventListener('click', () => {
+        appState.resetStopRequest = true;
+    });
+
+    btnTorTakeover.addEventListener('click', () => {
+        appState.modeRequest = 'MANUAL';
+        torOverlay.classList.add('hidden');
+    });
+
+    btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
 
     // Modal
     btnAbout.addEventListener('click', () => aboutModal.classList.remove('hidden'));
     btnCloseAbout.addEventListener('click', () => aboutModal.classList.add('hidden'));
 
-    // Prevent default touch behaviors
-    document.body.addEventListener('touchmove', (e) => {
-        if(e.target.type !== 'range') {
+    // Keyboard Listeners
+    window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keysPressed.up = true;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keysPressed.down = true;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keysPressed.left = true;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keysPressed.right = true;
+        if (e.key === ' ') {
+            appState.emergencyStopRequest = true;
             e.preventDefault();
         }
-    }, { passive: false });
+        updateKeyboardInputs();
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keysPressed.up = false;
+        if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keysPressed.down = false;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keysPressed.left = false;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keysPressed.right = false;
+        
+        updateKeyboardInputs();
+        
+        // Return to center when all keys released
+        if (!keysPressed.up && !keysPressed.down) {
+            appState.throttle = 0.0;
+            throttleSlider.value = 0;
+        }
+        if (!keysPressed.left && !keysPressed.right) {
+            appState.steering = 0.0;
+            steeringSlider.value = 0;
+        }
+    });
 }
 
-function updateStateFromUI() {
-    state.throttle = parseFloat(throttleSlider.value);
-    state.steering = parseFloat(steeringSlider.value);
-    
-    // Auto Steering Mode logic
-    if (state.throttle !== 0 && state.driveMode === 'local') {
-        state.driveMode = 'local_angle';
-        updateDriveModeUI();
-    }
-    
-    // Manual Mode override
-    if (state.steering !== 0 && state.driveMode !== 'user') {
-        state.driveMode = 'user';
-        updateDriveModeUI();
-    }
-}
-
-function resetSlider(slider, axis) {
-    slider.value = 0;
-    state[axis] = 0;
-}
-
-function toggleDriveMode() {
-    if (state.driveMode === 'local' || state.driveMode === 'local_angle') {
-        state.driveMode = 'user';
-    } else {
-        state.driveMode = 'local';
-    }
-    updateDriveModeUI();
-}
-
-function updateDriveModeUI() {
-    if (state.driveMode === 'local') {
-        btnDriveMode.textContent = 'Auto Mode';
-        btnDriveMode.classList.add('auto-mode');
-    } else if (state.driveMode === 'local_angle') {
-        btnDriveMode.textContent = 'Auto Steering';
-        btnDriveMode.classList.add('auto-mode');
-    } else {
-        btnDriveMode.textContent = 'Manual Mode';
-        btnDriveMode.classList.remove('auto-mode');
-    }
-}
-
-function toggleRec() {
-    if (!state.isAutoRec) {
-        state.isRecording = !state.isRecording;
-        updateRecUI();
-    }
-}
-
-function toggleAutoRec() {
-    state.isAutoRec = !state.isAutoRec;
-    if (state.isAutoRec) {
-        btnAutoRec.classList.add('danger', 'active');
-    } else {
-        btnAutoRec.classList.remove('danger', 'active');
-        state.isRecording = false;
-    }
-    updateRecUI();
-}
-
-function updateRecUI() {
-    if (state.isRecording) {
-        btnRec.classList.add('active-record');
-    } else {
-        btnRec.classList.remove('active-record');
-    }
-}
-
-function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-            console.log(`Error attempting to enable fullscreen: ${err.message}`);
-        });
-    } else {
-        document.exitFullscreen();
-    }
-}
-
-// --- Gamepad Logic ---
+// --- Gamepad Polling ---
 function pollGamepad() {
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-    let pad = gamepads[0];
+    const pad = gamepads[0];
     
     if (pad) {
         gamepadStatus.textContent = "Gamepad: On";
         gamepadStatus.classList.add('active');
 
-        const deadband = 0.05;
-        let analogX = pad.axes[2] || 0; // Right stick X for some controllers
-        let analogY = -(pad.axes[1] || 0); // Left stick Y
+        if (appState.mcuMode === 'MANUAL') {
+            const deadband = 0.08;
+            let stickX = pad.axes[0] || pad.axes[2] || 0;
+            let stickY = -(pad.axes[1] || 0);
 
-        if (Math.abs(analogX) < deadband) analogX = 0;
-        if (Math.abs(analogY) < deadband) analogY = 0;
+            if (Math.abs(stickX) < deadband) stickX = 0;
+            if (Math.abs(stickY) < deadband) stickY = 0;
 
-        const buttonA = pad.buttons[0]?.pressed;
-        const buttonB = pad.buttons[1]?.pressed;
-        const buttonX = pad.buttons[2]?.pressed || pad.buttons[3]?.pressed;
-        
-        // Simple mapping to UI
-        if(!throttleSlider.matches(':active')) {
-            throttleSlider.value = analogY;
-            state.throttle = analogY;
+            if (!throttleSlider.matches(':active') && !keysPressed.up && !keysPressed.down) {
+                appState.throttle = stickY;
+                throttleSlider.value = stickY;
+            }
+            if (!steeringSlider.matches(':active') && !keysPressed.left && !keysPressed.right) {
+                appState.steering = stickX;
+                steeringSlider.value = stickX;
+            }
         }
 
-        if(!steeringSlider.matches(':active')) {
-            steeringSlider.value = analogX;
-            state.steering = analogX;
+        // Button A or B for Emergency Stop
+        if (pad.buttons[1]?.pressed || pad.buttons[0]?.pressed) {
+            appState.emergencyStopRequest = true;
         }
-
-        // Button X: toggle drive mode
-        if (buttonX && !state.buttonX0) {
-            toggleDriveMode();
-        }
-        state.buttonX0 = buttonX;
-
-        // Button B: toggle Rec
-        if (buttonB && !state.buttonB0) {
-            toggleRec();
-        }
-        state.buttonB0 = buttonB;
-        
     } else {
         gamepadStatus.textContent = "Gamepad: Off";
         gamepadStatus.classList.remove('active');
     }
 }
 
-// --- Render Loop ---
+// --- Main Render Loop (60 FPS) ---
 function gameLoop(timestamp) {
-    // Calculate FPS
-    state.frameCount++;
-    if (timestamp - state.lastFrameTime >= 1000) {
-        state.fps = state.frameCount;
-        state.frameCount = 0;
-        state.lastFrameTime = timestamp;
-        fpsCounter.textContent = `FPS ${state.fps}`;
+    appState.frameCount++;
+    if (timestamp - appState.lastFrameTime >= 1000) {
+        appState.fps = appState.frameCount;
+        appState.frameCount = 0;
+        appState.lastFrameTime = timestamp;
+        fpsCounter.textContent = `FPS: ${appState.fps}`;
     }
 
     pollGamepad();
-
-    // Auto record logic
-    if (state.isAutoRec) {
-        if (Math.abs(state.throttle) > 0.01) {
-            if(!state.isRecording) {
-                state.isRecording = true;
-                updateRecUI();
-            }
-        } else {
-            if(state.isRecording) {
-                state.isRecording = false;
-                updateRecUI();
-            }
-        }
-    }
-
-    // Update UI Visuals
-    let tVal = Math.round(state.throttle * 100);
-    let sVal = Math.round(state.steering * 100);
-    
-    throttleValue.textContent = tVal;
-    steeringValue.textContent = sVal;
-
-    // Throttle gauge update (Arc length = 125 roughly)
-    const maxOffset = 125;
-    let offset = maxOffset - (Math.abs(state.throttle) * maxOffset);
-    throttleGauge.style.strokeDashoffset = offset;
-    
-    // Change throttle color based on direction/level
-    if (state.throttle < 0) {
-        throttleGauge.style.stroke = "var(--danger)";
-    } else if (state.throttle > 0.8) {
-        throttleGauge.style.stroke = "var(--warning)";
-    } else {
-        throttleGauge.style.stroke = "var(--neon-pink)";
-    }
-
-    // Steering pointer rotation
-    // Rotate from -90deg to 90deg based on -1 to 1
-    const rot = state.steering * 45; 
-    steeringPointer.style.transform = `rotate(${rot}deg)`;
-
-    // Mock Send WebSocket
-    wsMock.send(JSON.stringify({
-        angle: state.steering,
-        throttle: state.throttle,
-        drive_mode: state.driveMode,
-        recording: state.isRecording
-    }));
-
+    renderGauges();
     requestAnimationFrame(gameLoop);
 }
 
-// Start
+// Initialize Application
+function init() {
+    setupEventListeners();
+    connectWebSocket();
+    setInterval(sendCommandLoop, 100); // 100ms periodic transmit & watchdog
+    requestAnimationFrame(gameLoop);
+}
+
 init();
