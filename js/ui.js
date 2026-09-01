@@ -1,5 +1,5 @@
 /**
- * UI管理モジュール (HUD、ゲージ、モーダルダイアログ)
+ * UI管理モジュール (HUD、モーダルダイアログ)
  */
 import { UIState, StopReasonText, Config } from './constants.js';
 
@@ -15,11 +15,6 @@ export class UIManager {
             wsStatus: $('ws-status'),
             wsStatusText: $('ws-status-text'),
             distance: $('distance-badge'),
-            fps: $('fps-counter'),
-            throttleFill: $('throttle-bar-fill'),
-            steeringFill: $('steering-bar-fill'),
-            throttleVal: $('throttle-value'),
-            steeringVal: $('steering-value'),
             btnMode: $('btn-drive-mode'),
             btnModeText: $('btn-drive-mode-text'),
             btnReset: $('btn-reset-stop'),
@@ -103,34 +98,6 @@ export class UIManager {
         }
 
         if (this.el.btnStop) this.el.btnStop.disabled = isDis || uiState === UIState.EMERGENCY_STOP;
-    }
-
-    renderGauges(thr, str) {
-        const tPct = Math.round(thr * 100);
-        const sPct = Math.round(str * 100);
-        if (this.el.throttleVal) this.el.throttleVal.textContent = `${tPct > 0 ? '+' : ''}${tPct}%`;
-        if (this.el.steeringVal) this.el.steeringVal.textContent = `${sPct > 0 ? 'R' : sPct < 0 ? 'L' : ''}${Math.abs(sPct)}%`;
-
-        if (this.el.throttleFill) {
-            const fwd = thr >= 0;
-            Object.assign(this.el.throttleFill.style, {
-                bottom: fwd ? '50%' : 'auto',
-                top: fwd ? 'auto' : '50%',
-                height: `${Math.abs(thr) * 50}%`
-            });
-        }
-        if (this.el.steeringFill) {
-            const right = str >= 0;
-            Object.assign(this.el.steeringFill.style, {
-                left: right ? '50%' : 'auto',
-                right: right ? 'auto' : '50%',
-                width: `${Math.abs(str) * 50}%`
-            });
-        }
-    }
-
-    updateFPS(fps) {
-        if (this.el.fps) this.el.fps.textContent = `${fps} FPS`;
     }
 
     showError(msg) {

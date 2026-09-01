@@ -28,22 +28,6 @@ export class Mini4WDApp {
             onHeartbeat: (data) => this.stateMachine.handleHeartbeat(data),
             getTransmitPayload: () => this.stateMachine.getTransmitPayload()
         });
-
-        this.frameCount = 0;
-        this.lastFpsTimestamp = performance.now();
-        this.loop = this.loop.bind(this);
-        requestAnimationFrame(this.loop);
-    }
-
-    loop(ts) {
-        this.frameCount++;
-        if (ts - this.lastFpsTimestamp >= 1000) {
-            this.ui.updateFPS(this.frameCount);
-            this.frameCount = 0;
-            this.lastFpsTimestamp = ts;
-        }
-        this.ui.renderGauges(this.input.getThrottle(), this.input.getSteering());
-        requestAnimationFrame(this.loop);
     }
 }
 

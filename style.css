@@ -4,7 +4,6 @@
     --hud-border: #000000;
     --text-color: #000000;
     --text-muted: #555555;
-    --track-bg: #e5e7eb;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
@@ -200,36 +199,6 @@ html, body {
 .hud-btn:active { background: #000; color: #fff; }
 .emergency-btn { background: #000; color: #fff; font-size: 1.1rem; font-weight: 900; padding: 8px 18px; }
 .emergency-btn:active { background: #555; }
-
-/* Gauges */
-.hud-sidebar { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 22; }
-.hud-sidebar-left { left: calc(10px + var(--safe-left)); }
-.hud-sidebar-right { right: calc(10px + var(--safe-right)); }
-
-.slim-gauge-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    background: var(--hud-bg);
-    border: 1.5px solid var(--hud-border);
-    border-radius: 6px;
-    padding: 8px 6px;
-}
-
-.slim-gauge-bar-track { position: relative; background: var(--track-bg); border-radius: 2px; overflow: hidden; }
-.slim-gauge-bar-track.vertical { width: 8px; height: 90px; }
-.slim-gauge-bar-track.horizontal { width: 60px; height: 8px; }
-.slim-gauge-bar-fill { position: absolute; background: #000; }
-.vertical .slim-gauge-bar-fill { width: 100%; left: 0; bottom: 50%; height: 0; }
-.horizontal .slim-gauge-bar-fill { height: 100%; top: 0; left: 50%; width: 0; }
-
-.slim-gauge-center-line { position: absolute; background: rgba(0, 0, 0, 0.4); }
-.vertical .slim-gauge-center-line { top: 50%; left: 0; right: 0; height: 1.5px; }
-.horizontal-center { top: 0; bottom: 0; left: 50%; width: 1.5px; height: 100%; }
-
-.slim-gauge-val { font-family: monospace; font-size: 0.85rem; font-weight: 700; }
-.slim-gauge-label { font-size: 0.75rem; font-weight: 800; color: var(--text-muted); }
 
 /* Bottom Action & Alert */
 .hud-center-actions {
