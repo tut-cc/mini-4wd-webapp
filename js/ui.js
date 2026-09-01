@@ -10,19 +10,16 @@ export class UIManager {
         this.cb = callbacks;
         this.alertTimer = null;
 
-        // キャッシュ
+        // DOMキャッシュ
         this.el = {
-            wsStatus: $('ws-status'),
-            wsStatusText: $('ws-status-text'),
-            distance: $('distance-badge'),
-            btnMode: $('btn-drive-mode'),
-            btnModeText: $('btn-drive-mode-text'),
-            btnStop: $('btn-emergency-stop'),
-            btnStopText: $('btn-emergency-stop-text'),
-            stopReasonHud: $('stop-reason-hud'),
-            stopReasonText: $('status-stop-reason'),
-            alertBanner: $('alert-banner'),
-            alertMsg: $('alert-message'),
+            statusBadge: $('status-badge'),
+            statusText: $('status-text'),
+            distance: $('distance-val'),
+            btnMode: $('btn-mode'),
+            btnStop: $('btn-stop'),
+            stopReason: $('stop-reason'),
+            stopReasonText: $('stop-reason-text'),
+            alert: $('alert-banner'),
             torOverlay: $('tor-overlay'),
             torCountdown: $('tor-countdown'),
             disOverlay: $('disconnected-overlay'),
@@ -35,7 +32,7 @@ export class UIManager {
     initEvents() {
         this.el.btnMode?.addEventListener('click', () => this.cb.onDriveModeClick?.());
         this.el.btnStop?.addEventListener('click', () => this.cb.onStopClick?.());
-        $('btn-tor-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
+        $('btn-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
         $('btn-about')?.addEventListener('click', () => this.el.aboutModal?.classList.remove('hidden'));
         $('btn-close-about')?.addEventListener('click', () => this.el.aboutModal?.classList.add('hidden'));
     }
@@ -47,8 +44,8 @@ export class UIManager {
         const isPending = uiState === UIState.AUTO_PENDING || uiState === UIState.MANUAL_PENDING;
         const isAuto = uiState === UIState.AUTO || uiState === UIState.AUTO_PENDING;
 
-        if (this.el.wsStatusText) this.el.wsStatusText.textContent = isDis ? '未接続' : '接続中';
-        if (this.el.wsStatus) this.el.wsStatus.className = `hud-badge status-badge ${isDis ? 'disconnected' : 'connected'}`;
+        if (this.el.statusText) this.el.statusText.textContent = isDis ? '未接続' : '接続中';
+        if (this.el.statusBadge) this.el.statusBadge.classList.toggle('disconnected', isDis);
         this.el.disOverlay?.classList.toggle('hidden', !isDis);
         this.el.torOverlay?.classList.toggle('hidden', !isTor);
 
@@ -57,7 +54,7 @@ export class UIManager {
         }
 
         if (this.el.distance) this.el.distance.textContent = mcuData?.front_distance_mm ?? '--';
-        this.el.stopReasonHud?.classList.toggle('hidden', !isStopped);
+        this.el.stopReason?.classList.toggle('hidden', !isStopped);
         if (isStopped && this.el.stopReasonText) {
             let r = mcuData?.stop_reason;
             if (!r || r === 'NONE') {
@@ -67,23 +64,23 @@ export class UIManager {
         }
 
         if (this.el.btnMode) {
-            if (this.el.btnModeText) this.el.btnModeText.textContent = isAuto ? 'AUTO MODE' : 'MANUAL MODE';
+            this.el.btnMode.textContent = isAuto ? 'AUTO MODE' : 'MANUAL MODE';
             this.el.btnMode.classList.toggle('auto-mode', isAuto);
             this.el.btnMode.classList.toggle('pending', isPending);
             this.el.btnMode.disabled = isDis || isPending || isStopped || isTor;
         }
 
         if (this.el.btnStop) {
-            if (this.el.btnStopText) this.el.btnStopText.textContent = isStopped ? 'RESET' : 'STOP';
+            this.el.btnStop.textContent = isStopped ? 'RESET' : 'STOP';
             this.el.btnStop.classList.toggle('reset-mode', isStopped);
             this.el.btnStop.disabled = isDis;
         }
     }
 
     showError(msg) {
-        if (this.el.alertMsg) this.el.alertMsg.textContent = msg;
-        this.el.alertBanner?.classList.remove('hidden');
+        if (this.el.alert) this.el.alert.textContent = msg;
+        this.el.alert?.classList.remove('hidden');
         clearTimeout(this.alertTimer);
-        this.alertTimer = setTimeout(() => this.el.alertBanner?.classList.add('hidden'), Config.ALERT_DISPLAY_DURATION_MS);
+        this.alertTimer = setTimeout(() => this.el.alert?.classList.add('hidden'), Config.ALERT_DISPLAY_DURATION_MS);
     }
 }

@@ -21,8 +21,9 @@ html, body {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
+    position: relative;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg-color);
+    background: #f8f9fa;
     color: var(--text-color);
     overflow: hidden;
     user-select: none;
@@ -30,42 +31,29 @@ html, body {
     touch-action: none;
 }
 
-.app-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: #f8f9fa;
-}
-
-/* 1. Camera Video Background */
-.video-background-layer {
+/* 1. Camera Background */
+#camera {
     position: absolute;
     inset: 0;
-    z-index: 1;
-    background: #f0f2f5;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.camera-stream {
     width: 100%;
     height: 100%;
     object-fit: cover;
     image-rendering: pixelated;
+    background: #f0f2f5;
+    z-index: 1;
 }
 
 /* 2. Touch Controls */
-.touch-control-layer {
+#touch-zone {
     position: absolute;
     inset: 0;
     z-index: 10;
     cursor: grab;
 }
 
-.touch-control-layer:active { cursor: grabbing; }
+#touch-zone:active { cursor: grabbing; }
 
-.touch-joystick-base {
+#joystick {
     position: absolute;
     width: 100px;
     height: 100px;
@@ -78,12 +66,14 @@ html, body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.touch-joystick-track {
+/* Joystick Crosshair Tracks (CSS Pseudo-elements) */
+#joystick::before, #joystick::after {
+    content: '';
     position: absolute;
     background: rgba(0, 0, 0, 0.25);
 }
 
-.vertical-track {
+#joystick::before {
     top: 12px;
     bottom: 12px;
     left: 50%;
@@ -91,7 +81,7 @@ html, body {
     transform: translateX(-50%);
 }
 
-.horizontal-track {
+#joystick::after {
     left: 12px;
     right: 12px;
     top: 50%;
@@ -99,7 +89,7 @@ html, body {
     transform: translateY(-50%);
 }
 
-.touch-joystick-thumb {
+#joystick-thumb {
     position: absolute;
     width: 38px;
     height: 38px;
@@ -111,34 +101,21 @@ html, body {
     transition: transform 0.04s ease-out;
 }
 
-/* 3. HUD Layer */
-.hud-overlay-layer {
+/* 3. HUD (Top & Bottom) */
+.top-bar {
     position: absolute;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    pointer-events: none;
-    padding: calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(12px + var(--safe-left));
-}
-
-.hud-top-bar {
+    top: calc(8px + var(--safe-top));
+    left: calc(12px + var(--safe-left));
+    right: calc(12px + var(--safe-right));
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
     gap: 10px;
-}
-
-.hud-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    z-index: 20;
     pointer-events: auto;
 }
 
-.hud-badge, .distance-hud-card {
+.badge {
     display: flex;
     align-items: center;
     background: var(--hud-bg);
@@ -147,18 +124,30 @@ html, body {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.hud-badge {
+#status-badge {
+    width: 115px;
+    justify-content: center;
     gap: 6px;
     padding: 8px 14px;
     font-size: 1rem;
     font-weight: 700;
+    flex-shrink: 0;
 }
 
-.status-badge { width: 115px; justify-content: center; flex-shrink: 0; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #000; flex-shrink: 0; }
-.status-badge.disconnected .status-dot { background: transparent; border: 1.5px solid #000; }
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #000;
+    flex-shrink: 0;
+}
 
-.distance-hud-card {
+#status-badge.disconnected .status-dot {
+    background: transparent;
+    border: 1.5px solid #000;
+}
+
+#distance-card {
     gap: 6px;
     padding: 6px 16px;
     align-items: baseline;
@@ -167,8 +156,13 @@ html, body {
     flex-shrink: 0;
 }
 
-.distance-label, .distance-unit { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
-.distance-val {
+#distance-card .label, #distance-card .unit {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+#distance-card .val {
     font-family: monospace;
     font-size: 1.85rem;
     font-weight: 800;
@@ -177,29 +171,25 @@ html, body {
     line-height: 1;
 }
 
-.hud-btn {
-    min-height: 44px;
-    min-width: 64px;
-    padding: 8px 14px;
+/* Alert Banner */
+#alert-banner {
+    position: absolute;
+    top: calc(60px + var(--safe-top));
+    left: 50%;
+    transform: translateX(-50%);
     background: #fff;
-    border: 1.5px solid #000;
+    border: 2px solid #000;
+    padding: 10px 20px;
     border-radius: 6px;
-    color: #000;
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    flex-shrink: 0;
+    z-index: 50;
+    pointer-events: auto;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
-.hud-btn:active { background: #000; color: #fff; }
-
-/* Bottom Action & Alert */
-.hud-center-actions {
+/* Bottom Actions */
+.bottom-bar {
     position: absolute;
     bottom: calc(16px + var(--safe-bottom));
     left: 50%;
@@ -208,17 +198,11 @@ html, body {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    pointer-events: auto;
     z-index: 25;
+    pointer-events: auto;
 }
 
-.hud-action-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.stop-reason-hud {
+#stop-reason {
     position: absolute;
     bottom: calc(100% + 8px);
     left: 50%;
@@ -226,7 +210,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     padding: 0 16px;
     height: 36px;
     min-width: 220px;
@@ -234,16 +218,22 @@ html, body {
     border-radius: 6px;
     font-size: 0.9rem;
     font-weight: 800;
-    color: #fff;
+    color: #aaa;
     white-space: nowrap;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     pointer-events: none;
     z-index: 30;
 }
-.stop-reason-label { color: #aaa; font-size: 0.8rem; }
-.stop-reason-text { color: #fff; letter-spacing: 0.5px; }
 
-.hud-action-btn {
+#stop-reason-text { color: #fff; letter-spacing: 0.5px; }
+
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.action-btn {
     width: 185px;
     height: 54px;
     padding: 0 16px;
@@ -263,7 +253,7 @@ html, body {
     flex-shrink: 0;
 }
 
-.hud-action-btn.emergency-btn {
+.action-btn.btn-stop {
     width: 96px;
     background: #000;
     color: #fff;
@@ -271,76 +261,30 @@ html, body {
     font-weight: 900;
 }
 
-.hud-action-btn.emergency-btn:active { background: #555; }
+.action-btn.btn-stop:active { background: #555; }
 
-.hud-action-btn.emergency-btn.reset-mode {
+.action-btn.btn-stop.reset-mode {
     background: #fff;
     color: #000;
     border: 2px solid #000;
 }
 
-.hud-action-btn.emergency-btn.reset-mode:active {
+.action-btn.btn-stop.reset-mode:active {
     background: #000;
     color: #fff;
 }
 
-.hud-action-btn:active, .hud-action-btn.auto-mode { background: #000; color: #fff; }
-.hud-action-btn.auto-mode:active { background: #fff; color: #000; }
-.hud-action-btn.pending { opacity: 0.7; cursor: wait; }
-.hud-action-btn:disabled, .hud-btn:disabled {
+.action-btn:active, .action-btn.auto-mode { background: #000; color: #fff; }
+.action-btn.auto-mode:active { background: #fff; color: #000; }
+.action-btn.pending { opacity: 0.7; cursor: wait; }
+.action-btn:disabled, .btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
     pointer-events: none;
     box-shadow: none;
 }
 
-.hud-alert-banner {
-    position: absolute;
-    top: calc(60px + var(--safe-top));
-    left: 50%;
-    transform: translateX(-50%);
-    background: #fff;
-    border: 2px solid #000;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 700;
-    z-index: 50;
-    pointer-events: auto;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-}
-
-/* 4. Modals & Overlays */
-.hidden { display: none !important; }
-
-.modal, .tor-overlay, .disconnected-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: auto;
-    padding: 16px;
-}
-
-.modal { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
-.modal-content, .disconnected-modal-card {
-    background: #fff;
-    border: 2px solid #000;
-    padding: 24px;
-    border-radius: 8px;
-    max-width: 440px;
-    width: 100%;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
-.modal-content h2, .disconnected-modal-card h2, .tor-title { font-size: 1.35rem; font-weight: 800; margin-bottom: 8px; }
-.modal-desc, .tor-description { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; }
-.modal-content ul { margin: 10px 0 20px 20px; line-height: 1.6; }
-.sub-text { font-size: 0.85rem; color: var(--text-muted); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-
+/* 4. Common Buttons */
 .btn {
     padding: 12px 22px;
     min-height: 48px;
@@ -351,29 +295,87 @@ html, body {
     font-size: 1.05rem;
     font-weight: 700;
     cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
 }
+
 .btn:active { background: #fff; color: #000; }
 
-.tor-overlay {
+.btn-sm {
+    min-height: 44px;
+    min-width: 64px;
+    padding: 8px 14px;
+    background: #fff;
+    border: 1.5px solid #000;
+    color: #000;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.btn-sm:active { background: #000; color: #fff; }
+
+.btn-lg {
+    width: 100%;
+    font-size: 1.25rem;
+    font-weight: 800;
+    padding: 16px;
+}
+
+/* 5. Modals & Overlays */
+.hidden { display: none !important; }
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+    padding: 16px;
+}
+
+.overlay.backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+}
+
+.card {
+    background: #fff;
+    border: 2px solid #000;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.card.center { text-align: center; max-width: 400px; }
+.card h2 { font-size: 1.35rem; font-weight: 800; margin-bottom: 8px; }
+.card p { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; }
+.card ul { margin: 10px 0 20px 20px; line-height: 1.6; }
+.muted { font-size: 0.85rem; color: var(--text-muted); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+#tor-overlay {
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(4px);
     border: 6px solid #000;
     animation: mono-flash 0.8s infinite alternate;
 }
-.tor-modal-card {
-    background: #fff;
+
+.tor-card {
     border: 3px solid #000;
-    border-radius: 8px;
     padding: 28px 24px;
     text-align: center;
     max-width: 420px;
-    width: 100%;
 }
-.tor-timer { font-size: 1.4rem; font-weight: 800; margin-bottom: 20px; }
-.tor-takeover-btn { width: 100%; font-size: 1.25rem; font-weight: 800; padding: 16px; }
 
-.disconnected-overlay { background: rgba(255, 255, 255, 0.94); }
-.disconnected-modal-card { text-align: center; max-width: 400px; }
+.timer { font-size: 1.4rem; font-weight: 800; margin-bottom: 20px; }
+
+#disconnected-overlay { background: rgba(255, 255, 255, 0.94); }
+
 .spinner {
     width: 38px;
     height: 38px;
@@ -388,9 +390,9 @@ html, body {
 @keyframes mono-flash { 0% { border-color: #ccc; } 100% { border-color: #000; } }
 
 @media (max-width: 600px) {
-    .distance-val { font-size: 1.6rem; }
-    .hud-badge, .hud-btn { padding: 6px 10px; font-size: 0.9rem; }
-    .hud-action-btn { width: 165px; height: 50px; font-size: 1.05rem; padding: 0 10px; }
-    .hud-action-btn.emergency-btn { width: 88px; height: 50px; font-size: 1.05rem; padding: 0 8px; }
-    .stop-reason-hud { font-size: 0.85rem; height: 32px; min-width: 200px; padding: 0 12px; }
+    #distance-card .val { font-size: 1.6rem; }
+    #status-badge, .btn-sm { padding: 6px 10px; font-size: 0.9rem; }
+    .action-btn { width: 165px; height: 50px; font-size: 1.05rem; padding: 0 10px; }
+    .action-btn.btn-stop { width: 88px; height: 50px; font-size: 1.05rem; padding: 0 8px; }
+    #stop-reason { font-size: 0.85rem; height: 32px; min-width: 200px; padding: 0 12px; }
 }

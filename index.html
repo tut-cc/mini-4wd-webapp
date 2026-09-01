@@ -7,95 +7,73 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container">
-    <!-- 車載カメラ映像 -->
-    <div class="video-background-layer">
-      <img id="camera-stream" class="camera-stream" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
-    </div>
+  <!-- 車載カメラ映像 -->
+  <img id="camera" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
 
-    <!-- タッチ操作ゾーン (統合ジョイスティック) -->
-    <div class="touch-control-layer" id="touch-layer">
-      <div class="touch-joystick-base hidden" id="joystick-base">
-        <div class="touch-joystick-track vertical-track"></div>
-        <div class="touch-joystick-track horizontal-track"></div>
-        <div class="touch-joystick-thumb" id="joystick-thumb"></div>
-      </div>
-    </div>
-
-    <!-- HUD オーバーレイ -->
-    <div class="hud-overlay-layer">
-      <header class="hud-top-bar">
-        <div class="hud-group">
-          <div class="hud-badge status-badge" id="ws-status">
-            <span class="status-dot"></span>
-            <span id="ws-status-text">接続中</span>
-          </div>
-        </div>
-        <div class="hud-group">
-          <div class="distance-hud-card">
-            <span class="distance-label">前方距離</span>
-            <span class="distance-val" id="distance-badge">1200</span>
-            <span class="distance-unit">mm</span>
-          </div>
-        </div>
-        <div class="hud-group">
-          <button class="hud-btn" id="btn-about">INFO</button>
-        </div>
-      </header>
-
-      <div id="alert-banner" class="hud-alert-banner hidden">
-        <span id="alert-message">エラー通知</span>
-      </div>
-
-      <!-- 下部アクション (モード切替 & STOP & リセット) -->
-      <div class="hud-center-actions">
-        <div class="stop-reason-hud hidden" id="stop-reason-hud">
-          <span class="stop-reason-label">停止理由:</span>
-          <span class="stop-reason-text" id="status-stop-reason">NONE</span>
-        </div>
-        <div class="hud-action-row">
-          <button class="hud-action-btn" id="btn-drive-mode">
-            <span id="btn-drive-mode-text">MANUAL MODE</span>
-          </button>
-          <button class="hud-action-btn emergency-btn" id="btn-emergency-stop">
-            <span id="btn-emergency-stop-text">STOP</span>
-          </button>
-        </div>
-      </div>
+  <!-- タッチ操作ゾーン & 仮想ジョイスティック -->
+  <div id="touch-zone">
+    <div id="joystick" class="hidden">
+      <div id="joystick-thumb"></div>
     </div>
   </div>
 
-  <!-- TOR (Take Over Request) Overlay -->
-  <div id="tor-overlay" class="tor-overlay hidden">
-    <div class="tor-modal-card">
-      <h2 class="tor-title">TAKE OVER REQUEST</h2>
-      <p class="tor-description">自動運転の継続が困難です。手動操作へ引き継いでください。</p>
-      <div class="tor-timer">残り時間: <span id="tor-countdown">5.0</span> 秒</div>
-      <button class="btn tor-takeover-btn" id="btn-tor-takeover">手動操作に切り替える</button>
+  <!-- HUD ヘッダー (状態 / 距離 / INFO) -->
+  <header class="top-bar">
+    <div id="status-badge" class="badge">
+      <span class="status-dot"></span>
+      <span id="status-text">接続中</span>
+    </div>
+    <div id="distance-card" class="badge">
+      <span class="label">前方距離</span>
+      <span id="distance-val" class="val">1200</span>
+      <span class="unit">mm</span>
+    </div>
+    <button id="btn-about" class="btn btn-sm">INFO</button>
+  </header>
+
+  <!-- アラート通知 -->
+  <div id="alert-banner" class="hidden">エラー通知</div>
+
+  <!-- 操作フッター (停止理由 / モード切替 / STOP) -->
+  <footer class="bottom-bar">
+    <div id="stop-reason" class="hidden">停止理由: <span id="stop-reason-text">NONE</span></div>
+    <div class="action-row">
+      <button id="btn-mode" class="action-btn">MANUAL MODE</button>
+      <button id="btn-stop" class="action-btn btn-stop">STOP</button>
+    </div>
+  </footer>
+
+  <!-- TOR (Take Over Request) オーバーレイ -->
+  <div id="tor-overlay" class="overlay hidden">
+    <div class="card tor-card">
+      <h2>TAKE OVER REQUEST</h2>
+      <p>自動運転の継続が困難です。手動操作へ引き継いでください。</p>
+      <div class="timer">残り時間: <span id="tor-countdown">5.0</span> 秒</div>
+      <button id="btn-takeover" class="btn btn-lg">手動操作に切り替える</button>
     </div>
   </div>
 
-  <!-- Disconnected Overlay -->
-  <div id="disconnected-overlay" class="disconnected-overlay hidden">
-    <div class="disconnected-modal-card">
+  <!-- 切断オーバーレイ -->
+  <div id="disconnected-overlay" class="overlay hidden">
+    <div class="card center">
       <div class="spinner"></div>
       <h2>DISCONNECTED</h2>
       <p>サーバーに接続しています...</p>
-      <p class="sub-text">マイコンまたは mock_server.py の起動を確認してください</p>
+      <p class="muted">マイコンまたは mock_server.py の起動を確認してください</p>
     </div>
   </div>
 
-  <!-- About Modal -->
-  <div id="about-modal" class="modal hidden">
-    <div class="modal-content">
+  <!-- About モーダル -->
+  <div id="about-modal" class="overlay backdrop hidden">
+    <div class="card">
       <h2>ミニ四駆 コントローラー</h2>
-      <p class="modal-desc">シンプル・ライトテーマ モバイルコントローラー</p>
+      <p class="muted">シンプル・ライトテーマ モバイルコントローラー</p>
       <ul>
         <li><strong>走行操作:</strong> 画面をタッチ＆スワイプ（上下で前後、左右でステアリング）</li>
         <li><strong>安全機能:</strong> STOPボタンで即時停止</li>
       </ul>
       <div class="modal-actions">
-        <button class="btn" id="btn-close-about">閉じる</button>
+        <button id="btn-close-about" class="btn">閉じる</button>
       </div>
     </div>
   </div>

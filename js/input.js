@@ -8,8 +8,8 @@ const deadband = (v, db) => (Math.abs(v) < db ? 0 : v);
 
 export class InputController {
     constructor() {
-        this.zone = document.getElementById('touch-layer');
-        this.base = document.getElementById('joystick-base');
+        this.zone = document.getElementById('touch-zone');
+        this.base = document.getElementById('joystick');
         this.thumb = document.getElementById('joystick-thumb');
 
         this.pointerId = null;
