@@ -34,7 +34,13 @@ export class UIManager {
         this.el.btnStop?.addEventListener('click', () => this.cb.onStopClick?.());
         $('btn-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
         $('btn-info')?.addEventListener('click', () => this.el.infoModal?.classList.remove('hidden'));
-        $('btn-close-info')?.addEventListener('click', () => this.el.infoModal?.classList.add('hidden'));
+        
+        // 背景タップ/クリックで閉じる
+        this.el.infoModal?.addEventListener('click', (e) => {
+            if (e.target === this.el.infoModal) {
+                this.el.infoModal.classList.add('hidden');
+            }
+        });
     }
 
     renderState(uiState, mcuData) {
