@@ -22,19 +22,19 @@ export const MCUMode = {
 export const ModeRequest = { NONE: 'NONE', MANUAL: 'MANUAL', AUTO: 'AUTO' };
 
 export const StopReasonText = {
-    OBSTACLE: 'OBSTACLE DETECTED',
-    TOR_TIMEOUT: 'TOR TIMEOUT',
-    EMERGENCY_BUTTON: 'EMERGENCY STOP',
-    COMM_TIMEOUT: 'COMM TIMEOUT',
-    SENSOR_ERROR: 'SENSOR ERROR'
+    OBSTACLE: '障害物検知',
+    TOR_TIMEOUT: '引継ぎ時間切れ',
+    EMERGENCY_BUTTON: '非常停止',
+    COMM_TIMEOUT: '通信切断',
+    SENSOR_ERROR: 'センサー異常'
 };
 
 export const RejectReasonText = {
-    OBSTACLE_NEAR: 'OBSTACLE NEAR',
-    SENSOR_NOT_READY: 'SENSOR NOT READY',
-    IN_TOR: 'IN TOR WARNING',
-    IN_EMERGENCY: 'IN EMERGENCY STOP',
-    MODE_MISMATCH: 'MODE MISMATCH'
+    OBSTACLE_NEAR: '前方に障害物があります',
+    SENSOR_NOT_READY: 'センサーが準備できていません',
+    IN_TOR: '運転引継ぎ警告中です',
+    IN_EMERGENCY: '非常停止中のため操作できません',
+    MODE_MISMATCH: '停止中のため切替できません'
 };
 
 export const Config = {

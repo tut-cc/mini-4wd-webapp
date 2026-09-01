@@ -4,7 +4,7 @@
 """
 import time
 from typing import Callable, Optional
-from .constants import MCUMode, StopReason, RejectReason, DEADMAN_TIMEOUT_SEC
+from .constants import MCUMode, StopReason, RejectReason, DEADMAN_TIMEOUT_SEC, COMM_TIMEOUT_SEC
 
 class VehicleController:
     def __init__(self, on_motor_update: Optional[Callable[[float, float], None]] = None):
@@ -76,6 +76,9 @@ class VehicleController:
         """
         停止状態 (SAFE_STOP / EMERGENCY_STOP) からの復帰要求を処理
         """
+        if self.state["mode"] not in (MCUMode.SAFE_STOP, MCUMode.EMERGENCY_STOP):
+            return False
+
         if self.state["front_distance_mm"] > 200:
             self.state["mode"] = MCUMode.MANUAL
             self.state["stop_reason"] = StopReason.NONE
@@ -94,7 +97,22 @@ class VehicleController:
         """
         current_mode = self.state["mode"]
 
+        # 非常停止中の切替要求は拒否
+        if current_mode == MCUMode.EMERGENCY_STOP:
+            self.state["request_reject_reason"] = RejectReason.IN_EMERGENCY
+            return False
+
+        # 安全停止中の切替要求は拒否 (要リセット)
+        if current_mode == MCUMode.SAFE_STOP:
+            self.state["request_reject_reason"] = RejectReason.MODE_MISMATCH
+            return False
+
         if target_mode == MCUMode.AUTO:
+            # TOR中のAUTO切替要求は拒否
+            if self.state["tor_active"]:
+                self.state["request_reject_reason"] = RejectReason.IN_TOR
+                return False
+
             # MANUALからAUTOへの切り替え
             if current_mode == MCUMode.MANUAL:
                 if self.state["front_distance_mm"] > 300:
@@ -110,7 +128,7 @@ class VehicleController:
                 return False
 
         elif target_mode == MCUMode.MANUAL:
-            # AUTOやTOR等からMANUALへの手動介入
+            # AUTOやTOR等からMANUALへの手動介入 (即時受諾)
             self.state["mode"] = MCUMode.MANUAL
             self.state["tor_active"] = False
             self.state["tor_remaining_ms"] = 0
@@ -127,13 +145,15 @@ class VehicleController:
             return
 
         self.last_command_time = time.monotonic()
+        client_mode = cmd.get("client_mode")
+        current_mode = self.state["mode"]
 
         # 1. 最優先: 非常停止
         if cmd.get("emergency_stop_request"):
             self.trigger_emergency_stop(StopReason.EMERGENCY_BUTTON)
             return
 
-        # 2. リセット要求
+        # 2. リセット要求 (停止状態のみ受容)
         if cmd.get("reset_stop_request"):
             self.reset_stop()
             return
@@ -145,21 +165,25 @@ class VehicleController:
 
         # 4. 手動走行指示 (スロットル / ステアリング)
         if self.state["mode"] == MCUMode.MANUAL:
-            try:
-                th = float(cmd.get("throttle", 0.0))
-                st = float(cmd.get("steering", 0.0))
-            except (ValueError, TypeError):
+            # 状態不一致でクライアントがMANUAL以外と認識している場合は安全のため走行指示を破棄
+            if client_mode and client_mode != MCUMode.MANUAL:
                 th, st = 0.0, 0.0
-            # 安全のため [-1.0, 1.0] にクランプ
-            th = max(-1.0, min(1.0, th))
-            st = max(-1.0, min(1.0, st))
+            else:
+                try:
+                    th = float(cmd.get("throttle", 0.0))
+                    st = float(cmd.get("steering", 0.0))
+                except (ValueError, TypeError):
+                    th, st = 0.0, 0.0
+                # 安全のため [-1.0, 1.0] にクランプ
+                th = max(-1.0, min(1.0, th))
+                st = max(-1.0, min(1.0, st))
             self._apply_motor(th, st)
         else:
             self._apply_motor(0.0, 0.0)
 
     def tick(self, dt_ms: int):
         """
-        定期周期更新 (TORカウントダウン、デッドマン監視など)
+        定期周期更新 (TORカウントダウン、デッドマン監視、通信断監視など)
         :param dt_ms: 前回tickからの経過時間 (ミリ秒)
         """
         # TOR カウントダウン & 猶予切れ時の自動安全停止
@@ -167,6 +191,11 @@ class VehicleController:
             self.state["tor_remaining_ms"] = max(0, self.state["tor_remaining_ms"] - dt_ms)
             if self.state["tor_remaining_ms"] == 0:
                 self.trigger_safe_stop(StopReason.TOR_TIMEOUT)
+
+        # 通信途絶監視 (1.5秒間コマンド未受信で SAFE_STOP)
+        if self.state["mode"] not in (MCUMode.SAFE_STOP, MCUMode.EMERGENCY_STOP):
+            if time.monotonic() - self.last_command_time > COMM_TIMEOUT_SEC:
+                self.trigger_safe_stop(StopReason.COMM_TIMEOUT)
 
         # デッドマンタイマー (MANUAL走行中、コマンド途絶で自動中立)
         if self.state["mode"] == MCUMode.MANUAL:

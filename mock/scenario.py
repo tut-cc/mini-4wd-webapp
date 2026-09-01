@@ -28,13 +28,13 @@ DEFAULT_SCENARIOS = {
         "mode": "AUTO",
         "front_distance_mm": 350,
         "tor_active": True,
-        "tor_remaining_ms": 4500,
+        "tor_remaining_ms": 5000,
         "stop_reason": "NONE",
         "request_reject_reason": "NONE"
     },
     "obstacle_stop": {
         "mode": "SAFE_STOP",
-        "front_distance_mm": 90,
+        "front_distance_mm": 80,
         "tor_active": False,
         "tor_remaining_ms": 0,
         "stop_reason": "OBSTACLE",

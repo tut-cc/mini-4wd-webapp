@@ -49,13 +49,13 @@ stateDiagram-v2
         AUTO_PENDING --> AUTO: Heartbeat (mode=AUTO) 受信
         AUTO_PENDING --> MANUAL: 要求拒否 または 1.0秒タイムアウト
 
-        AUTO --> MANUAL_PENDING: MANUAL切替ボタン押下
+        AUTO --> MANUAL_PENDING: モード切替ボタン押下
         MANUAL_PENDING --> MANUAL: Heartbeat (mode=MANUAL) 受信
-        MANUAL_PENDING --> AUTO: 1.0秒タイムアウト
+        MANUAL_PENDING --> MANUAL_PENDING: 1.0秒タイムアウト (手動優先・再送継続)
 
         AUTO --> AUTO_TOR: Heartbeat (tor_active=true) 受信
         AUTO_TOR --> AUTO: Heartbeat (tor_active=false) 受信 (自律解消)
-        AUTO_TOR --> MANUAL: 「TAKE OVER」押下による引継ぎ
+        AUTO_TOR --> MANUAL_PENDING: 「TAKE OVER」押下による引継ぎ要求
         AUTO_TOR --> SAFE_STOP: Heartbeat (mode=SAFE_STOP) 受信 (TOR時間切れ)
 
         MANUAL --> SAFE_STOP: Heartbeat (mode=SAFE_STOP) 受信 (障害物検知等)
@@ -78,11 +78,11 @@ stateDiagram-v2
 
 ### 操作可否一覧表
 
-| UI状態 | スロットル / ステアリング（タッチ） | モード切替ボタン | STOP / RESET ボタン | 画面表示・アラート |
+| UI状態 | スロットル / ステアリング（タッチ） | モード切替ボタン（現在状態を表示） | STOP / RESET ボタン | 画面表示・アラート |
 |---|---|---|---|---|
-| **MANUAL** | **有効**（操作送信） | 有効（`AUTO` 要求） | **有効**（「STOP」即時発報） | FPVカメラ映像、前方距離HUD |
-| **AUTO_PENDING** | 無効 | 無効（「PENDING...」） | **有効**（「STOP」即時発報） | モード要求 Pending 表示（モノクロバッジ） |
-| **AUTO** | 無効（ロック） | 有効（`MANUAL` 要求） | **有効**（「STOP」即時発報） | 自動運転中ステータス表示（白黒反転バッジ） |
+| **MANUAL** | **有効**（操作送信） | 有効（表示: `MANUAL MODE` / 押下で `AUTO` 要求） | **有効**（「STOP」即時発報） | FPVカメラ映像、前方距離HUD |
+| **AUTO_PENDING** | 無効 | 無効（表示: `AUTO MODE` / 点滅Pending） | **有効**（「STOP」即時発報） | モード要求 Pending 表示（モノクロバッジ） |
+| **AUTO** | 無効（ロック） | 有効（表示: `AUTO MODE` 反転 / 押下で `MANUAL` 要求） | **有効**（「STOP」即時発報） | 自動運転中ステータス表示（白黒反転バッジ） |
 | **AUTO_TOR** | 無効（引継ぎ優先） | 無効（ロック） | **有効**（「STOP」即時発報） | **白枠点滅オーバーレイ**、カウントダウン、TAKE OVERボタン |
 | **SAFE_STOP** | 無効（ロック） | 無効（ロック） | **有効**（「RESET」再開要求） | 停止理由（障害物/タイムアウト等）HUD表示 |
 | **EMERGENCY_STOP** | 無効（完全ロック） | 無効（ロック） | **有効**（「RESET」再開要求） | **白黒点滅アラート**、停止理由表示 |

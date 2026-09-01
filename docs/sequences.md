@@ -76,7 +76,7 @@ sequenceDiagram
 
 ---
 
-## 3. MANUALモードの方向操作と通信途絶（2軸制御・斜め走行）
+## 3. MANUALモードの方向操作と通信途絶（2軸仮想ジョイスティック・斜め走行）
 
 ```mermaid
 sequenceDiagram
@@ -86,22 +86,22 @@ sequenceDiagram
 
     Note over W, M: 初期状態: MANUALモード (停止中)
 
-    U->>W: ↑ 押下 + ← 押下 (斜め前左へ走行)
+    U->>W: 左上方向へドラッグ (斜め前左へ走行)
     W->>M: client_mode=MANUAL, throttle=1.0, steering=-1.0
     M->>M: 前進左旋回駆動開始<br/>デッドマンタイマー開始
 
-    opt 押下継続中
+    opt ドラッグ継続中
         W->>M: client_mode=MANUAL, throttle=1.0, steering=-1.0 (100ms周期)
         M->>M: デッドマンタイマーリセット
     end
 
-    alt 正常系 1: ← だけ離す (直進前進へ移行)
-        U->>W: ← ボタンを離す (↑ は押下継続)
+    alt 正常系 1: 真上ドラッグへ戻す (直進前進へ移行)
+        U->>W: 真上方向へドラッグ位置を戻す
         W->>M: client_mode=MANUAL, throttle=1.0, steering=0.0
         M->>M: ステアリングを中央に戻し直進前進を維持
 
-    else 正常系 2: 両方のボタンを離す (停止)
-        U->>W: 全ボタンを離す
+    else 正常系 2: 指を離す (停止)
+        U->>W: タッチ終了 (指を離す)
         W->>M: client_mode=MANUAL, throttle=0.0, steering=0.0
         M->>M: モーター停止
 
@@ -113,7 +113,7 @@ sequenceDiagram
         W->>W: UIを SAFE_STOP 画面へ強制同期
 
     else 異常系 2: 停止信号パケットロス または 通信途絶
-        U->>W: ボタンを離すが停止信号が欠落
+        U->>W: 指を離すが停止信号が欠落
         Note over M: デッドマンタイマー満了 (300ms間受信なし)
         M->>M: モーターを自動停止 (throttle=0, steering=0)
     end

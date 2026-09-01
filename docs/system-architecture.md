@@ -10,7 +10,7 @@
 flowchart TB
     subgraph Client["操作端末 (PC / スマートフォン / タブレット)"]
         UI["WebApp UI (HTML5 / CSS / JavaScript)"]
-        GP["入力デバイス (Gamepad API / Keyboard / Touch)"]
+        GP["入力デバイス (タッチ / マウスドラッグ)"]
         GP --> UI
     end
 
@@ -96,7 +96,7 @@ flowchart LR
 flowchart TD
     subgraph WebApp_Role["WebApp (クライアント)"]
         R1["UI表示・ステータス描画"]
-        R2["キーボード/ゲームパッド/タッチ入力の受付"]
+        R2["タッチ/マウスによる仮想ジョイスティック入力の受付"]
         R3["認識モード (client_mode) と操作要求の送信"]
         R4["Heartbeat受信監視 (未受信1.5秒で切断判定)"]
         R5["Pendingタイムアウト管理 (1.0秒)"]

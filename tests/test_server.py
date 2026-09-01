@@ -75,6 +75,49 @@ class TestVehicleController(unittest.TestCase):
         self.assertAlmostEqual(th, 0.75)
         self.assertAlmostEqual(st, -0.5)
 
+    def test_comm_timeout_to_safe_stop(self):
+        # コマンド送信後、1.5秒以上経過すると COMM_TIMEOUT で SAFE_STOP に遷移
+        self.controller.last_command_time = time.monotonic() - 1.6
+        self.controller.tick(100)
+        self.assertEqual(self.controller.state["mode"], MCUMode.SAFE_STOP)
+        self.assertEqual(self.controller.state["stop_reason"], StopReason.COMM_TIMEOUT)
+
+    def test_stop_rejects_manual_switch(self):
+        # EMERGENCY_STOP 中は mode_request: MANUAL を拒否 (IN_EMERGENCY)
+        self.controller.trigger_emergency_stop()
+        self.controller.process_command({"mode_request": "MANUAL"})
+        self.assertEqual(self.controller.state["mode"], MCUMode.EMERGENCY_STOP)
+        self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.IN_EMERGENCY)
+
+        # SAFE_STOP 中も mode_request: MANUAL を拒否 (MODE_MISMATCH)
+        self.controller.trigger_safe_stop()
+        self.controller.process_command({"mode_request": "MANUAL"})
+        self.assertEqual(self.controller.state["mode"], MCUMode.SAFE_STOP)
+        self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.MODE_MISMATCH)
+
+    def test_running_reset_ignored(self):
+        # AUTO走行中は reset_stop_request が無視される
+        self.controller.update_sensor(500)
+        self.controller.process_command({"mode_request": "AUTO"})
+        self.assertEqual(self.controller.state["mode"], MCUMode.AUTO)
+
+        self.controller.process_command({"reset_stop_request": True})
+        self.assertEqual(self.controller.state["mode"], MCUMode.AUTO)
+
+    def test_client_mode_mismatch_discard_throttle(self):
+        # クライアントが SAFE_STOP 認識のままスロットルを送信した場合、破棄される
+        self.controller.process_command({"client_mode": "SAFE_STOP", "throttle": 0.8, "steering": 0.5})
+        th, st = self.controller.get_motor_output()
+        self.assertEqual(th, 0.0)
+        self.assertEqual(st, 0.0)
+
+    def test_tor_rejects_auto_request(self):
+        # TOR中に AUTO 要求が来たら IN_TOR で拒否
+        self.controller.state["mode"] = MCUMode.AUTO
+        self.controller.trigger_tor(duration_ms=4500)
+        self.controller.process_command({"mode_request": "AUTO"})
+        self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.IN_TOR)
+
     def test_camera_generation(self):
         camera = MockCameraProvider(self.controller)
         frame = camera.get_frame()

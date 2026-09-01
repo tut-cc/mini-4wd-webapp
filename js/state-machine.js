@@ -43,7 +43,7 @@ export class StateMachine {
     handleHeartbeat(data) {
         this.mcuData = data;
         if (data.request_reject_reason && data.request_reject_reason !== 'NONE') {
-            this.app.ui.showError(`REJECTED: ${RejectReasonText[data.request_reject_reason] || data.request_reject_reason}`);
+            this.app.ui.showError(`切替拒否: ${RejectReasonText[data.request_reject_reason] || data.request_reject_reason}`);
         }
 
         if (this.state === UIState.DISCONNECTED) return this.syncToMCU();
@@ -96,25 +96,35 @@ export class StateMachine {
         }
     }
 
+    startManualSwitch() {
+        this.pendingModeRequest = ModeRequest.MANUAL;
+        this.transitionTo(UIState.MANUAL_PENDING);
+        this.scheduleManualResend();
+    }
+
+    scheduleManualResend() {
+        this.clearTimer();
+        this.pendingTimer = setTimeout(() => {
+            if (this.state === UIState.MANUAL_PENDING) {
+                this.app.ui.showError('切替応答待ち (手動復帰を再送中...)');
+                this.pendingModeRequest = ModeRequest.MANUAL;
+                this.scheduleManualResend();
+            }
+        }, Config.MODE_SWITCH_TIMEOUT_MS);
+    }
+
     requestDriveModeToggle() {
         if (this.state === UIState.MANUAL) {
             this.pendingModeRequest = ModeRequest.AUTO;
             this.transitionTo(UIState.AUTO_PENDING);
             this.pendingTimer = setTimeout(() => {
                 if (this.state === UIState.AUTO_PENDING) {
-                    this.app.ui.showError('MODE SWITCH TIMEOUT');
+                    this.app.ui.showError('モード切替タイムアウト');
                     this.transitionTo(UIState.MANUAL);
                 }
             }, Config.MODE_SWITCH_TIMEOUT_MS);
-        } else if (this.state === UIState.AUTO) {
-            this.pendingModeRequest = ModeRequest.MANUAL;
-            this.transitionTo(UIState.MANUAL_PENDING);
-            this.pendingTimer = setTimeout(() => {
-                if (this.state === UIState.MANUAL_PENDING) {
-                    this.app.ui.showError('MODE SWITCH TIMEOUT (RESENDING)');
-                    this.pendingModeRequest = ModeRequest.MANUAL;
-                }
-            }, Config.MODE_SWITCH_TIMEOUT_MS);
+        } else if (this.state === UIState.AUTO || this.state === UIState.AUTO_TOR) {
+            this.startManualSwitch();
         }
     }
 
@@ -128,13 +138,12 @@ export class StateMachine {
 
     requestEmergencyStop() {
         this.pendingEmergencyStop = true;
-        this.mcuData = { ...this.mcuData, mode: MCUMode.EMERGENCY_STOP, stop_reason: 'EMERGENCY_BUTTON' };
         this.clearTimer();
-        this.transitionTo(UIState.EMERGENCY_STOP);
+        // マイコンからの Heartbeat (mode=EMERGENCY_STOP) 受信で確定遷移
     }
 
     requestResetStop() { this.pendingResetStop = true; }
-    requestTorTakeover() { this.pendingModeRequest = ModeRequest.MANUAL; }
+    requestTorTakeover() { this.startManualSwitch(); }
     handleDisconnect() { this.clearTimer(); this.transitionTo(UIState.DISCONNECTED); }
     handleConnect() { this.syncToMCU(); }
 }
