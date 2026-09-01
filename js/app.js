@@ -1,7 +1,6 @@
 /**
  * ミニ四駆自動運転 WebApp - メインエントリーポイント
  */
-
 import { InputController } from './input.js';
 import { CameraManager } from './camera.js';
 import { UIManager } from './ui.js';
@@ -36,24 +35,16 @@ export class Mini4WDApp {
         requestAnimationFrame(this.loop);
     }
 
-    loop(timestamp) {
+    loop(ts) {
         this.frameCount++;
-        if (timestamp - this.lastFpsTimestamp >= 1000) {
-            const fps = this.frameCount;
-            this.ui.updateFPS(fps);
+        if (ts - this.lastFpsTimestamp >= 1000) {
+            this.ui.updateFPS(this.frameCount);
             this.frameCount = 0;
-            this.lastFpsTimestamp = timestamp;
+            this.lastFpsTimestamp = ts;
         }
-
-        const currentThrottle = this.input.getThrottle();
-        const currentSteering = this.input.getSteering();
-
-        this.ui.renderGauges(currentThrottle, currentSteering);
-
+        this.ui.renderGauges(this.input.getThrottle(), this.input.getSteering());
         requestAnimationFrame(this.loop);
     }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    window.app = new Mini4WDApp();
-});
+window.addEventListener('DOMContentLoaded', () => { window.app = new Mini4WDApp(); });

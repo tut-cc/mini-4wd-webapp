@@ -1,12 +1,10 @@
 :root {
     --bg-color: #ffffff;
     --hud-bg: rgba(255, 255, 255, 0.94);
-    --hud-border: #cccccc;
-    --hud-border-solid: #000000;
+    --hud-border: #000000;
     --text-color: #000000;
     --text-muted: #555555;
     --track-bg: #e5e7eb;
-    
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
@@ -24,10 +22,9 @@ html, body {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: var(--bg-color);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-color);
     color: var(--text-color);
-    font-size: 16px;
     overflow: hidden;
     user-select: none;
     -webkit-user-select: none;
@@ -38,21 +35,15 @@ html, body {
     position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
-    background-color: #f8f9fa;
+    background: #f8f9fa;
 }
 
-/* =========================================================
-   1. Video Background Layer (車載カメラ映像)
-   ========================================================= */
+/* 1. Camera Video Background */
 .video-background-layer {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
     z-index: 1;
     background: #f0f2f5;
-    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -62,86 +53,35 @@ html, body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
     image-rendering: pixelated;
 }
 
-.camera-status-hud {
-    position: absolute;
-    top: calc(10px + var(--safe-top));
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background: var(--hud-bg);
-    border: 1px solid var(--hud-border-solid);
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: var(--text-color);
-    pointer-events: none;
-    z-index: 2;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.live-indicator-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #000000;
-}
-
-
-
-/* =========================================================
-   2. Touch Control Layer (左右分割・スマホ親指ブラインド操作)
-   ========================================================= */
+/* 2. Touch Controls */
 .touch-control-layer {
     position: absolute;
     inset: 0;
     z-index: 10;
     display: flex;
-    pointer-events: auto;
-    touch-action: none;
 }
 
 .touch-zone {
     flex: 1;
     height: 100%;
     position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    touch-action: none;
-    user-select: none;
     cursor: grab;
 }
 
-.touch-zone:active {
-    cursor: grabbing;
-}
+.touch-zone:active { cursor: grabbing; }
+.throttle-zone { border-right: 1px solid rgba(0, 0, 0, 0.06); }
+.steering-zone { border-left: 1px solid rgba(0, 0, 0, 0.06); }
 
-.throttle-zone {
-    border-right: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.steering-zone {
-    border-left: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-
-
-/* タッチ時のジョイスティック - ライトテーマ */
 .touch-joystick-base {
     position: absolute;
     width: 100px;
     height: 100px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.92);
-    border: 2px solid #000000;
+    border: 2px solid #000;
     pointer-events: none;
     transform: translate(-50%, -50%);
     z-index: 15;
@@ -174,16 +114,14 @@ html, body {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #000000;
+    background: #000;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     transition: transform 0.04s ease-out;
 }
 
-/* =========================================================
-   3. HUD Overlay Layer (ライトテーマ・シンプル・大文字)
-   ========================================================= */
+/* 3. HUD Layer */
 .hud-overlay-layer {
     position: absolute;
     inset: 0;
@@ -195,7 +133,6 @@ html, body {
     padding: calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(12px + var(--safe-left));
 }
 
-/* Top HUD Bar */
 .hud-top-bar {
     display: flex;
     justify-content: space-between;
@@ -211,167 +148,63 @@ html, body {
     pointer-events: auto;
 }
 
-.hud-badge {
+.hud-badge, .distance-hud-card {
     display: flex;
     align-items: center;
+    background: var(--hud-bg);
+    border: 1.5px solid var(--hud-border);
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.hud-badge {
     gap: 6px;
     padding: 8px 14px;
-    background: var(--hud-bg);
-    border: 1.5px solid var(--hud-border-solid);
-    border-radius: 6px;
     font-size: 1rem;
     font-weight: 700;
-    color: var(--text-color);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.status-badge {
-    min-width: 115px;
-    justify-content: center;
-}
+.status-badge { min-width: 115px; justify-content: center; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #000; }
+.status-badge.disconnected .status-dot { background: transparent; border: 1.5px solid #000; }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #000000;
-}
-
-.status-badge.disconnected .status-dot {
-    background: transparent;
-    border: 1.5px solid #000000;
-}
-
-.mode-badge {
-    font-weight: 800;
-    font-size: 1.05rem;
-    letter-spacing: 0.5px;
-    min-width: 100px;
-    justify-content: center;
-    text-align: center;
-}
-
-.mode-badge.mode-manual {
-    background: #ffffff;
-    border-color: #000000;
-    color: #000000;
-}
-
-.mode-badge.mode-auto {
-    background: #000000;
-    border-color: #000000;
-    color: #ffffff;
-}
-
-.mode-badge.mode-safestop,
-.mode-badge.mode-emergency {
-    background: #000000;
-    color: #ffffff;
-    border-color: #000000;
-    animation: mono-blink 0.8s infinite;
-}
-
-.mode-badge.mode-autopending,
-.mode-badge.mode-manualpending {
-    background: #ffffff;
-    color: var(--text-muted);
-    border-style: dashed;
-}
-
-/* 前方距離HUD (大文字で見やすい) */
 .distance-hud-card {
-    display: flex;
-    align-items: baseline;
     gap: 6px;
     padding: 6px 16px;
-    background: var(--hud-bg);
-    border: 1.5px solid var(--hud-border-solid);
-    border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    align-items: baseline;
 }
 
-.distance-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-muted);
-}
-
+.distance-label, .distance-unit { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
 .distance-val {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    font-family: monospace;
     font-size: 1.85rem;
     font-weight: 800;
-    color: #000000;
     min-width: 55px;
     text-align: right;
     line-height: 1;
 }
 
-.distance-unit {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-muted);
-}
-
-.distance-hud-card.warning,
-.distance-hud-card.danger {
-    border-width: 2.5px;
-}
-
-/* 右上アクションボタン */
 .hud-btn {
     min-height: 44px;
     padding: 8px 14px;
-    background: #ffffff;
-    border: 1.5px solid #000000;
+    background: #fff;
+    border: 1.5px solid #000;
     border-radius: 6px;
-    color: #000000;
+    color: #000;
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.1s ease;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.hud-btn:active {
-    background: #000000;
-    color: #ffffff;
-}
+.hud-btn:active { background: #000; color: #fff; }
+.emergency-btn { background: #000; color: #fff; font-size: 1.1rem; font-weight: 900; padding: 8px 18px; }
+.emergency-btn:active { background: #555; }
 
-.emergency-btn {
-    background: #000000;
-    color: #ffffff;
-    border: 2px solid #000000;
-    font-weight: 900;
-    font-size: 1.1rem;
-    padding: 8px 18px;
-    min-width: 76px;
-}
-
-.emergency-btn:active {
-    background: #555555;
-    border-color: #555555;
-    color: #ffffff;
-}
-
-/* --- HUD Sidebars (ミニマルゲージ) --- */
-.hud-sidebar {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 22;
-}
-
-.hud-sidebar-left {
-    left: calc(10px + var(--safe-left));
-}
-
-.hud-sidebar-right {
-    right: calc(10px + var(--safe-right));
-}
+/* Gauges */
+.hud-sidebar { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 22; }
+.hud-sidebar-left { left: calc(10px + var(--safe-left)); }
+.hud-sidebar-right { right: calc(10px + var(--safe-right)); }
 
 .slim-gauge-container {
     display: flex;
@@ -379,81 +212,26 @@ html, body {
     align-items: center;
     gap: 6px;
     background: var(--hud-bg);
-    border: 1.5px solid var(--hud-border-solid);
+    border: 1.5px solid var(--hud-border);
     border-radius: 6px;
     padding: 8px 6px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
-.slim-gauge-bar-track {
-    position: relative;
-    background: var(--track-bg);
-    border-radius: 2px;
-    overflow: hidden;
-}
+.slim-gauge-bar-track { position: relative; background: var(--track-bg); border-radius: 2px; overflow: hidden; }
+.slim-gauge-bar-track.vertical { width: 8px; height: 90px; }
+.slim-gauge-bar-track.horizontal { width: 60px; height: 8px; }
+.slim-gauge-bar-fill { position: absolute; background: #000; }
+.vertical .slim-gauge-bar-fill { width: 100%; left: 0; bottom: 50%; height: 0; }
+.horizontal .slim-gauge-bar-fill { height: 100%; top: 0; left: 50%; width: 0; }
 
-.slim-gauge-bar-track.vertical {
-    width: 8px;
-    height: 90px;
-}
+.slim-gauge-center-line { position: absolute; background: rgba(0, 0, 0, 0.4); }
+.vertical .slim-gauge-center-line { top: 50%; left: 0; right: 0; height: 1.5px; }
+.horizontal-center { top: 0; bottom: 0; left: 50%; width: 1.5px; height: 100%; }
 
-.slim-gauge-bar-track.horizontal {
-    width: 60px;
-    height: 8px;
-}
+.slim-gauge-val { font-family: monospace; font-size: 0.85rem; font-weight: 700; }
+.slim-gauge-label { font-size: 0.75rem; font-weight: 800; color: var(--text-muted); }
 
-.slim-gauge-bar-fill {
-    position: absolute;
-    background: #000000;
-    transition: all 0.05s ease-out;
-}
-
-.vertical .slim-gauge-bar-fill {
-    width: 100%;
-    left: 0;
-    bottom: 50%;
-    height: 0%;
-}
-
-.horizontal .slim-gauge-bar-fill {
-    height: 100%;
-    top: 0;
-    left: 50%;
-    width: 0%;
-}
-
-.slim-gauge-center-line {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1.5px;
-    background: rgba(0, 0, 0, 0.4);
-}
-
-.horizontal-center {
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 1.5px;
-    height: 100%;
-}
-
-.slim-gauge-val {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-color);
-}
-
-.slim-gauge-label {
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-}
-
-/* --- Center Dynamic Action Area (下部中央アクション) --- */
+/* Bottom Action & Alert */
 .hud-center-actions {
     position: absolute;
     bottom: calc(16px + var(--safe-bottom));
@@ -469,85 +247,42 @@ html, body {
 
 .stop-reason-hud {
     display: flex;
-    align-items: center;
     gap: 8px;
     padding: 6px 14px;
-    background: #000000;
-    border: 2px solid #000000;
+    background: #000;
     border-radius: 6px;
     font-size: 0.95rem;
     font-weight: 700;
-    color: #ffffff;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    color: #fff;
 }
-
-.stop-reason-label {
-    color: #cccccc;
-}
+.stop-reason-label { color: #ccc; }
 
 .hud-action-btn {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 250px;
     max-width: 90vw;
     height: 56px;
     padding: 0 20px;
-    background: #ffffff;
-    border: 2px solid #000000;
-    color: #000000;
+    background: #fff;
+    border: 2px solid #000;
+    color: #000;
     font-size: 1.2rem;
     font-weight: 800;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.1s ease, color 0.1s ease;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.hud-action-btn:active {
-    background: #000000;
-    color: #ffffff;
-}
+.hud-action-btn:active, .hud-action-btn.auto-mode, .reset-action-btn { background: #000; color: #fff; }
+.hud-action-btn.auto-mode:active, .reset-action-btn:active { background: #fff; color: #000; }
+.hud-action-btn.pending { opacity: 0.7; cursor: wait; }
 
-.hud-action-btn.auto-mode {
-    background: #000000;
-    color: #ffffff;
-}
-
-.hud-action-btn.auto-mode:active {
-    background: #ffffff;
-    color: #000000;
-}
-
-.hud-action-btn.pending {
-    opacity: 0.7;
-    cursor: wait;
-}
-
-.reset-action-btn {
-    background: #000000;
-    color: #ffffff;
-    border: 2px solid #000000;
-}
-
-.reset-action-btn:active {
-    background: #ffffff;
-    color: #000000;
-}
-
-/* Alert Banner */
 .hud-alert-banner {
     position: absolute;
     top: calc(60px + var(--safe-top));
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #ffffff;
-    border: 2px solid #000000;
-    color: #000000;
+    background: #fff;
+    border: 2px solid #000;
     padding: 10px 20px;
     border-radius: 6px;
     font-size: 1rem;
@@ -557,19 +292,12 @@ html, body {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
-/* =========================================================
-   4. Modals & Overlays (ライトテーマ・完全モノクロ)
-   ========================================================= */
+/* 4. Modals & Overlays */
 .hidden { display: none !important; }
 
-.modal {
+.modal, .tor-overlay, .disconnected-overlay {
     position: fixed;
     inset: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
     z-index: 100;
     display: flex;
     justify-content: center;
@@ -578,263 +306,76 @@ html, body {
     padding: 16px;
 }
 
-.modal-content {
-    background: #ffffff;
-    border: 2px solid #000000;
+.modal { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
+.modal-content, .disconnected-modal-card {
+    background: #fff;
+    border: 2px solid #000;
     padding: 24px;
     border-radius: 8px;
     max-width: 440px;
     width: 100%;
-    color: var(--text-color);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-.modal-content h2 {
-    font-size: 1.35rem;
-    font-weight: 800;
-    margin-bottom: 8px;
-    color: #000000;
-}
-
-.modal-desc {
-    font-size: 1rem;
-    color: var(--text-muted);
-    margin-bottom: 16px;
-    line-height: 1.4;
-}
-
-.modal-content ul {
-    margin: 10px 0 20px 20px;
-    line-height: 1.6;
-    font-size: 1rem;
-}
-
-.form-group {
-    margin-bottom: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.form-group label {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #000000;
-}
-
-.custom-input {
-    width: 100%;
-    padding: 12px 14px;
-    background: #ffffff;
-    border: 1.5px solid #000000;
-    border-radius: 6px;
-    color: #000000;
-    font-size: 1rem;
-    outline: none;
-    font-family: inherit;
-}
-
-.custom-input:focus {
-    border-width: 2.5px;
-}
-
-.input-hint {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
+.modal-content h2, .disconnected-modal-card h2, .tor-title { font-size: 1.35rem; font-weight: 800; margin-bottom: 8px; }
+.modal-desc, .tor-description { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; }
+.modal-content ul { margin: 10px 0 20px 20px; line-height: 1.6; }
+.form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 0.95rem; font-weight: 700; }
+.custom-input { width: 100%; padding: 12px 14px; border: 1.5px solid #000; border-radius: 6px; font-size: 1rem; outline: none; }
+.input-hint, .sub-text { font-size: 0.85rem; color: var(--text-muted); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 .btn {
     padding: 12px 22px;
     min-height: 48px;
-    background: #000000;
-    border: 2px solid #000000;
-    color: #ffffff;
+    background: #000;
+    border: 2px solid #000;
+    color: #fff;
     border-radius: 6px;
     font-size: 1.05rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.1s ease;
 }
+.btn:active { background: #fff; color: #000; }
+.btn-secondary { background: #fff; border: 1.5px solid #000; color: #000; }
+.btn-secondary:active { background: #000; color: #fff; }
 
-.btn:active {
-    background: #ffffff;
-    color: #000000;
-}
-
-.btn-secondary {
-    background: #ffffff;
-    border: 1.5px solid #000000;
-    color: #000000;
-}
-
-.btn-secondary:active {
-    background: #000000;
-    color: #ffffff;
-}
-
-/* TOR Overlay */
 .tor-overlay {
-    position: fixed;
-    inset: 0;
     background: rgba(255, 255, 255, 0.88);
     backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 90;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 6px solid #000000;
+    border: 6px solid #000;
     animation: mono-flash 0.8s infinite alternate;
-    pointer-events: auto;
-    padding: 16px;
 }
-
 .tor-modal-card {
-    background: #ffffff;
-    border: 3px solid #000000;
+    background: #fff;
+    border: 3px solid #000;
     border-radius: 8px;
     padding: 28px 24px;
     text-align: center;
     max-width: 420px;
     width: 100%;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
 }
+.tor-timer { font-size: 1.4rem; font-weight: 800; margin-bottom: 20px; }
+.tor-takeover-btn { width: 100%; font-size: 1.25rem; font-weight: 800; padding: 16px; }
 
-.tor-title {
-    color: #000000;
-    font-size: 1.6rem;
-    font-weight: 900;
-    margin-bottom: 10px;
-}
-
-.tor-description {
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    margin-bottom: 16px;
-    line-height: 1.4;
-}
-
-.tor-timer {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #000000;
-    margin-bottom: 20px;
-}
-
-.tor-takeover-btn {
-    background: #000000;
-    color: #ffffff;
-    font-size: 1.25rem;
-    font-weight: 800;
-    padding: 16px 24px;
-    border-radius: 6px;
-    border: 2px solid #000000;
-    cursor: pointer;
-    width: 100%;
-}
-
-.tor-takeover-btn:active {
-    background: #ffffff;
-    color: #000000;
-}
-
-/* Disconnected Overlay */
-.disconnected-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.94);
-    z-index: 80;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: auto;
-    padding: 16px;
-}
-
-.disconnected-modal-card {
-    background: #ffffff;
-    border: 2px solid #000000;
-    border-radius: 8px;
-    padding: 28px 24px;
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.disconnected-modal-card h2 {
-    font-size: 1.4rem;
-    font-weight: 800;
-    margin-bottom: 8px;
-    color: #000000;
-}
-
-.disconnected-modal-card p {
-    font-size: 1.05rem;
-    color: var(--text-color);
-}
-
+.disconnected-overlay { background: rgba(255, 255, 255, 0.94); }
+.disconnected-modal-card { text-align: center; max-width: 400px; }
 .spinner {
     width: 38px;
     height: 38px;
     border: 3px solid #e0e0e0;
-    border-top: 3px solid #000000;
+    border-top: 3px solid #000;
     border-radius: 50%;
-    margin: 0 auto 16px auto;
+    margin: 0 auto 16px;
     animation: spin 0.8s linear infinite;
 }
 
-.sub-text {
-    font-size: 0.9rem !important;
-    color: var(--text-muted) !important;
-    margin-top: 8px;
-}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes mono-flash { 0% { border-color: #ccc; } 100% { border-color: #000; } }
 
-/* =========================================================
-   5. Animations
-   ========================================================= */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes mono-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
-}
-
-@keyframes mono-flash {
-    0% { border-color: #cccccc; }
-    100% { border-color: #000000; }
-}
-
-/* Responsive */
 @media (max-width: 600px) {
-    .distance-val {
-        font-size: 1.6rem;
-    }
-    .hud-badge {
-        padding: 6px 10px;
-        font-size: 0.9rem;
-    }
-    .hud-btn {
-        padding: 6px 10px;
-        font-size: 0.88rem;
-    }
-    .emergency-btn {
-        font-size: 1rem;
-        padding: 6px 12px;
-    }
-    .touch-guide-text {
-        font-size: 0.85rem;
-    }
+    .distance-val { font-size: 1.6rem; }
+    .hud-badge, .hud-btn { padding: 6px 10px; font-size: 0.9rem; }
+    .emergency-btn { font-size: 1rem; padding: 6px 12px; }
 }
-
-

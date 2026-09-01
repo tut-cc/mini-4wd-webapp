@@ -1,77 +1,65 @@
 /**
  * 通信管理モジュール (WebSocket通信 & 定期ループ)
  */
-
 import { Config } from './constants.js';
 
 export class CommManager {
-    constructor(callbacks) {
-        this.callbacks = callbacks;
+    constructor(cb) {
+        this.cb = cb;
         this.ws = null;
-        this.lastHeartbeatTime = 0;
+        this.lastHeartbeat = 0;
         this.connected = false;
 
-        const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = location.host || 'localhost:8765';
-        this.wsUrl = `${wsProto}//${wsHost}`;
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        this.wsUrl = `${proto}//${location.host || 'localhost:8765'}`;
 
         this.connect();
-        this.startTransmitLoop();
+        setInterval(() => {
+            if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
+                this.onLost();
+            }
+            if (this.ws?.readyState === WebSocket.OPEN) {
+                const payload = this.cb.getTransmitPayload?.();
+                if (payload) this.ws.send(JSON.stringify(payload));
+            }
+        }, Config.TRANSMIT_INTERVAL_MS);
     }
 
     connect() {
         try {
             this.ws = new WebSocket(this.wsUrl);
         } catch (_) {
-            this.onConnectionLost();
+            this.onLost();
             return setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
         }
 
         this.ws.onopen = () => {
             this.connected = true;
-            this.lastHeartbeatTime = Date.now();
-            this.callbacks.onConnect?.();
+            this.lastHeartbeat = Date.now();
+            this.cb.onConnect?.();
         };
 
-        this.ws.onmessage = (event) => {
+        this.ws.onmessage = (e) => {
             try {
-                const data = JSON.parse(event.data);
-                this.lastHeartbeatTime = Date.now();
+                this.lastHeartbeat = Date.now();
                 if (!this.connected) {
                     this.connected = true;
-                    this.callbacks.onConnect?.();
+                    this.cb.onConnect?.();
                 }
-                this.callbacks.onHeartbeat?.(data);
-            } catch (e) {
-                console.error('[CommManager] Invalid Heartbeat JSON:', e);
-            }
+                this.cb.onHeartbeat?.(JSON.parse(e.data));
+            } catch (_) {}
         };
 
-        this.ws.onclose = () => {
-            this.onConnectionLost();
+        this.ws.onclose = this.ws.onerror = () => {
+            this.onLost();
             setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
         };
-
-        this.ws.onerror = () => this.onConnectionLost();
     }
 
-    onConnectionLost() {
+    onLost() {
         if (this.connected) {
             this.connected = false;
-            this.callbacks.onDisconnect?.();
+            this.cb.onDisconnect?.();
         }
-    }
-
-    startTransmitLoop() {
-        setInterval(() => {
-            if (this.connected && Date.now() - this.lastHeartbeatTime > Config.WS_HEARTBEAT_TIMEOUT_MS) {
-                this.onConnectionLost();
-            }
-
-            if (this.ws?.readyState === WebSocket.OPEN) {
-                const payload = this.callbacks.getTransmitPayload?.();
-                if (payload) this.ws.send(JSON.stringify(payload));
-            }
-        }, Config.TRANSMIT_INTERVAL_MS);
     }
 }
