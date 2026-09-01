@@ -60,19 +60,10 @@ html, body {
     position: absolute;
     inset: 0;
     z-index: 10;
-    display: flex;
-}
-
-.touch-zone {
-    flex: 1;
-    height: 100%;
-    position: relative;
     cursor: grab;
 }
 
-.touch-zone:active { cursor: grabbing; }
-.throttle-zone { border-right: 1px solid rgba(0, 0, 0, 0.06); }
-.steering-zone { border-left: 1px solid rgba(0, 0, 0, 0.06); }
+.touch-control-layer:active { cursor: grabbing; }
 
 .touch-joystick-base {
     position: absolute;

@@ -1,135 +1,94 @@
 /**
- * 入力制御モジュール (仮想ジョイスティック & キーボード)
+ * 入力制御モジュール (統合2D仮想ジョイスティック)
  */
 import { Config } from './constants.js';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const deadband = (v, db) => (Math.abs(v) < db ? 0 : v);
 
-class VirtualStick {
-    constructor({ zone, base, thumb, axis = 'y' }) {
-        this.zone = zone;
-        this.base = base;
-        this.thumb = thumb;
-        this.axis = axis;
+export class InputController {
+    constructor() {
+        this.zone = document.getElementById('touch-layer');
+        this.base = document.getElementById('joystick-base');
+        this.thumb = document.getElementById('joystick-thumb');
+
         this.pointerId = null;
-        this.value = 0;
+        this.startX = 0;
+        this.startY = 0;
+        this.throttle = 0;
+        this.steering = 0;
         this.enabled = true;
 
-        if (!zone || !base || !thumb) return;
+        this.initEvents();
+    }
 
-        zone.addEventListener('pointerdown', (e) => {
+    initEvents() {
+        if (!this.zone || !this.base || !this.thumb) return;
+
+        this.zone.addEventListener('pointerdown', (e) => {
             if (!this.enabled || this.pointerId !== null || (e.button !== undefined && e.button !== 0)) return;
             e.preventDefault();
             this.pointerId = e.pointerId;
-            try { zone.setPointerCapture(e.pointerId); } catch (_) {}
+            try { this.zone.setPointerCapture(e.pointerId); } catch (_) {}
 
-            const rect = zone.getBoundingClientRect();
-            base.style.left = `${e.clientX - rect.left}px`;
-            base.style.top = `${e.clientY - rect.top}px`;
-            thumb.style.transform = 'translate(-50%, -50%)';
-            base.classList.remove('hidden');
+            const rect = this.zone.getBoundingClientRect();
+            this.startX = e.clientX;
+            this.startY = e.clientY;
+            this.base.style.left = `${e.clientX - rect.left}px`;
+            this.base.style.top = `${e.clientY - rect.top}px`;
+            this.thumb.style.transform = 'translate(-50%, -50%)';
+            this.base.classList.remove('hidden');
 
-            this.startPos = (axis === 'y') ? e.clientY : e.clientX;
-            this.value = 0;
+            this.throttle = 0;
+            this.steering = 0;
         });
 
-        zone.addEventListener('pointermove', (e) => {
+        this.zone.addEventListener('pointermove', (e) => {
             if (this.pointerId !== e.pointerId) return;
             e.preventDefault();
-            const pos = (axis === 'y') ? e.clientY : e.clientX;
-            const delta = (axis === 'y') ? (this.startPos - pos) : (pos - this.startPos);
-            this.value = deadband(clamp(delta / Config.TOUCH_MAX_DISTANCE, -1, 1), Config.INPUT_DEADBAND);
 
-            const offset = (axis === 'y' ? -this.value : this.value) * (Config.TOUCH_MAX_DISTANCE * 0.5);
-            thumb.style.transform = axis === 'y'
-                ? `translate(-50%, calc(-50% + ${offset}px))`
-                : `translate(calc(-50% + ${offset}px), -50%)`;
+            const dx = e.clientX - this.startX;
+            const dy = this.startY - e.clientY; // 上方向が前進(正)
+
+            const maxDist = Config.TOUCH_MAX_DISTANCE;
+            const dist = Math.hypot(dx, dy);
+            const scale = dist > maxDist ? maxDist / dist : 1;
+            const cx = dx * scale;
+            const cy = -dy * scale;
+
+            this.thumb.style.transform = `translate(calc(-50% + ${cx}px), calc(-50% + ${cy}px))`;
+
+            this.steering = deadband(clamp(dx / maxDist, -1, 1), Config.INPUT_DEADBAND);
+            this.throttle = deadband(clamp(dy / maxDist, -1, 1), Config.INPUT_DEADBAND);
         });
 
         const onEnd = (e) => {
             if (this.pointerId !== e.pointerId) return;
-            try { zone.releasePointerCapture?.(e.pointerId); } catch (_) {}
+            try { this.zone.releasePointerCapture?.(e.pointerId); } catch (_) {}
             this.reset();
         };
-        zone.addEventListener('pointerup', onEnd);
-        zone.addEventListener('pointercancel', onEnd);
-    }
 
-    reset() {
-        this.pointerId = null;
-        this.value = 0;
-        this.base?.classList.add('hidden');
-    }
-}
-
-export class InputController {
-    constructor(onEmergencyStop) {
-        this.enabled = true;
-        this.keys = { up: 0, down: 0, left: 0, right: 0 };
-
-        this.throttleStick = new VirtualStick({
-            zone: document.getElementById('touch-throttle-zone'),
-            base: document.getElementById('throttle-joystick-base'),
-            thumb: document.getElementById('throttle-joystick-thumb'),
-            axis: 'y'
-        });
-
-        this.steeringStick = new VirtualStick({
-            zone: document.getElementById('touch-steering-zone'),
-            base: document.getElementById('steering-joystick-base'),
-            thumb: document.getElementById('steering-joystick-thumb'),
-            axis: 'x'
-        });
-
-        const keyMap = {
-            ArrowUp: 'up', w: 'up', W: 'up',
-            ArrowDown: 'down', s: 'down', S: 'down',
-            ArrowLeft: 'left', a: 'left', A: 'left',
-            ArrowRight: 'right', d: 'right', D: 'right'
-        };
-
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                return onEmergencyStop?.();
-            }
-            if (keyMap[e.key]) {
-                e.preventDefault();
-                this.keys[keyMap[e.key]] = 1;
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (keyMap[e.key]) {
-                e.preventDefault();
-                this.keys[keyMap[e.key]] = 0;
-            }
-        });
+        this.zone.addEventListener('pointerup', onEnd);
+        this.zone.addEventListener('pointercancel', onEnd);
     }
 
     setEnabled(enabled) {
         this.enabled = enabled;
-        this.throttleStick.enabled = enabled;
-        this.steeringStick.enabled = enabled;
         if (!enabled) this.reset();
     }
 
     reset() {
-        this.throttleStick.reset();
-        this.steeringStick.reset();
-        Object.keys(this.keys).forEach(k => (this.keys[k] = 0));
+        this.pointerId = null;
+        this.throttle = 0;
+        this.steering = 0;
+        this.base?.classList.add('hidden');
     }
 
     getThrottle() {
-        if (!this.enabled) return 0;
-        const kb = this.keys.up - this.keys.down;
-        return kb !== 0 ? kb : this.throttleStick.value;
+        return this.enabled ? this.throttle : 0;
     }
 
     getSteering() {
-        if (!this.enabled) return 0;
-        const kb = this.keys.right - this.keys.left;
-        return kb !== 0 ? kb : this.steeringStick.value;
+        return this.enabled ? this.steering : 0;
     }
 }

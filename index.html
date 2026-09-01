@@ -13,19 +13,12 @@
       <img id="camera-stream" class="camera-stream" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
     </div>
 
-    <!-- タッチ操作ゾーン (左: スロットル / 右: ステアリング) -->
+    <!-- タッチ操作ゾーン (統合ジョイスティック) -->
     <div class="touch-control-layer" id="touch-layer">
-      <div class="touch-zone throttle-zone" id="touch-throttle-zone">
-        <div class="touch-joystick-base hidden" id="throttle-joystick-base">
-          <div class="touch-joystick-track vertical-track"></div>
-          <div class="touch-joystick-thumb" id="throttle-joystick-thumb"></div>
-        </div>
-      </div>
-      <div class="touch-zone steering-zone" id="touch-steering-zone">
-        <div class="touch-joystick-base hidden" id="steering-joystick-base">
-          <div class="touch-joystick-track horizontal-track"></div>
-          <div class="touch-joystick-thumb" id="steering-joystick-thumb"></div>
-        </div>
+      <div class="touch-joystick-base hidden" id="joystick-base">
+        <div class="touch-joystick-track vertical-track"></div>
+        <div class="touch-joystick-track horizontal-track"></div>
+        <div class="touch-joystick-thumb" id="joystick-thumb"></div>
       </div>
     </div>
 
@@ -97,8 +90,7 @@
       <h2>ミニ四駆 コントローラー</h2>
       <p class="modal-desc">シンプル・ライトテーマ モバイルコントローラー</p>
       <ul>
-        <li><strong>スマホ操作:</strong> 画面左でスロットル (前後)、画面右でステアリング (左右)</li>
-        <li><strong>PC操作:</strong> 矢印キー（↑↓←→）のみ / Spaceで緊急停止</li>
+        <li><strong>走行操作:</strong> 画面をタッチ＆スワイプ（上下で前後、左右でステアリング）</li>
         <li><strong>安全機能:</strong> STOPボタンで即時停止</li>
       </ul>
       <div class="modal-actions">

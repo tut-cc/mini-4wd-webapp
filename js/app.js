@@ -8,7 +8,7 @@ import { StateMachine } from './state-machine.js';
 
 export class Mini4WDApp {
     constructor() {
-        this.input = new InputController(() => this.stateMachine.requestEmergencyStop());
+        this.input = new InputController();
 
         this.ui = new UIManager({
             onDriveModeClick: () => this.stateMachine.requestDriveModeToggle(),
