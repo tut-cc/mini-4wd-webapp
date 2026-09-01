@@ -53,13 +53,6 @@ class MockCameraProvider(BaseCameraProvider):
                         val = 40 if (((int(y + self.road_offset)) // 6) % 2 == 0) else 255
                     elif abs(x - cur_vanish) <= 1 and ((int(y + self.road_offset)) // 10) % 2 == 0:
                         val = 60
-                    if (dist < 600 or state.get("stop_reason") == "OBSTACLE") and dist < 1500:
-                        d_norm = max(0.05, min(1.0, dist / 1500.0))
-                        obs_y = horizon_y + int((1.0 - d_norm) * (h * 0.40))
-                        obs_w = int(14 + (1.0 - d_norm) * 60)
-                        obs_h = int(8 + (1.0 - d_norm) * 24)
-                        if obs_y <= y <= obs_y + obs_h and abs(x - int(vanish_x * d_norm)) <= obs_w // 2:
-                            val = 40
                     raw[row + 1 + x] = val
 
         def chunk(tag: bytes, data: bytes) -> bytes:
