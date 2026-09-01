@@ -5,7 +5,7 @@
 ---
 
 ## 1. 通信方式の概要
-- **WebApp画面配信**: HTTP GET（`index.html`, `app.js`, `style.css` 等をマイコンから直接配信）
+- **WebApp画面配信**: HTTP GET（`index.html`, `js/*.js`, `style.css` 等をマイコンから直接配信）
 - **制御・テレメトリ通信**: WebSocket（双方向 / テキスト形式 JSON）
 - **文字コード**: UTF-8
 - **通信周期**: 100ms 周期（10 Hz）で双方向定期通信

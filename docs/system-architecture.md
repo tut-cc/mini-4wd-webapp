@@ -63,7 +63,7 @@ flowchart LR
 
     subgraph Network["Wi-Fi 通信"]
         direction TB
-        HTTP_STATIC["【画面配信】 HTTP GET\n- index.html / app.js / style.css\n- 初回アクセス時"]
+        HTTP_STATIC["【画面配信】 HTTP GET\n- index.html / js/*.js / style.css\n- 初回アクセス時"]
         WS["【制御系統】 WebSocket\n- 低遅延・軽量JSON\n- 100ms周期 双方向\n- 操作コマンド / Heartbeat"]
         HTTP_CAM["【映像系統】 HTTP/MJPEG または WebRTC\n- 映像フレームストリーム\n- 制御とは非同期"]
     end
