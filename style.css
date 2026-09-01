@@ -154,14 +154,17 @@ html, body {
     font-weight: 700;
 }
 
-.status-badge { min-width: 115px; justify-content: center; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #000; }
+.status-badge { width: 115px; justify-content: center; flex-shrink: 0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #000; flex-shrink: 0; }
 .status-badge.disconnected .status-dot { background: transparent; border: 1.5px solid #000; }
 
 .distance-hud-card {
     gap: 6px;
     padding: 6px 16px;
     align-items: baseline;
+    justify-content: center;
+    min-width: 135px;
+    flex-shrink: 0;
 }
 
 .distance-label, .distance-unit { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
@@ -169,13 +172,14 @@ html, body {
     font-family: monospace;
     font-size: 1.85rem;
     font-weight: 800;
-    min-width: 55px;
+    min-width: 60px;
     text-align: right;
     line-height: 1;
 }
 
 .hud-btn {
     min-height: 44px;
+    min-width: 64px;
     padding: 8px 14px;
     background: #fff;
     border: 1.5px solid #000;
@@ -185,11 +189,14 @@ html, body {
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-shrink: 0;
 }
 
 .hud-btn:active { background: #000; color: #fff; }
-.emergency-btn { background: #000; color: #fff; font-size: 1.1rem; font-weight: 900; padding: 8px 18px; }
-.emergency-btn:active { background: #555; }
 
 /* Bottom Action & Alert */
 .hud-center-actions {
@@ -205,36 +212,87 @@ html, body {
     z-index: 25;
 }
 
-.stop-reason-hud {
+.hud-action-row {
     display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stop-reason-hud {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 6px 14px;
+    padding: 0 16px;
+    height: 36px;
+    min-width: 220px;
     background: #000;
     border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: 0.9rem;
+    font-weight: 800;
     color: #fff;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    z-index: 30;
 }
-.stop-reason-label { color: #ccc; }
+.stop-reason-label { color: #aaa; font-size: 0.8rem; }
+.stop-reason-text { color: #fff; letter-spacing: 0.5px; }
 
 .hud-action-btn {
-    width: 250px;
-    max-width: 90vw;
-    height: 56px;
-    padding: 0 20px;
+    width: 185px;
+    height: 54px;
+    padding: 0 16px;
     background: #fff;
     border: 2px solid #000;
     color: #000;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     font-weight: 800;
     border-radius: 8px;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-shrink: 0;
 }
 
-.hud-action-btn:active, .hud-action-btn.auto-mode, .reset-action-btn { background: #000; color: #fff; }
-.hud-action-btn.auto-mode:active, .reset-action-btn:active { background: #fff; color: #000; }
+.hud-action-btn.emergency-btn {
+    width: 96px;
+    background: #000;
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 900;
+}
+
+.hud-action-btn.emergency-btn:active { background: #555; }
+
+.hud-action-btn.emergency-btn.reset-mode {
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+}
+
+.hud-action-btn.emergency-btn.reset-mode:active {
+    background: #000;
+    color: #fff;
+}
+
+.hud-action-btn:active, .hud-action-btn.auto-mode { background: #000; color: #fff; }
+.hud-action-btn.auto-mode:active { background: #fff; color: #000; }
 .hud-action-btn.pending { opacity: 0.7; cursor: wait; }
+.hud-action-btn:disabled, .hud-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+}
 
 .hud-alert-banner {
     position: absolute;
@@ -332,5 +390,7 @@ html, body {
 @media (max-width: 600px) {
     .distance-val { font-size: 1.6rem; }
     .hud-badge, .hud-btn { padding: 6px 10px; font-size: 0.9rem; }
-    .emergency-btn { font-size: 1rem; padding: 6px 12px; }
+    .hud-action-btn { width: 165px; height: 50px; font-size: 1.05rem; padding: 0 10px; }
+    .hud-action-btn.emergency-btn { width: 88px; height: 50px; font-size: 1.05rem; padding: 0 8px; }
+    .stop-reason-hud { font-size: 0.85rem; height: 32px; min-width: 200px; padding: 0 12px; }
 }

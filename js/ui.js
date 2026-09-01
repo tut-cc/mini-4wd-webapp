@@ -17,9 +17,8 @@ export class UIManager {
             distance: $('distance-badge'),
             btnMode: $('btn-drive-mode'),
             btnModeText: $('btn-drive-mode-text'),
-            btnReset: $('btn-reset-stop'),
-            btnResetText: $('btn-reset-stop-text'),
             btnStop: $('btn-emergency-stop'),
+            btnStopText: $('btn-emergency-stop-text'),
             stopReasonHud: $('stop-reason-hud'),
             stopReasonText: $('status-stop-reason'),
             alertBanner: $('alert-banner'),
@@ -35,8 +34,7 @@ export class UIManager {
 
     initEvents() {
         this.el.btnMode?.addEventListener('click', () => this.cb.onDriveModeClick?.());
-        this.el.btnStop?.addEventListener('click', () => this.cb.onEmergencyStopClick?.());
-        this.el.btnReset?.addEventListener('click', () => this.cb.onResetStopClick?.());
+        this.el.btnStop?.addEventListener('click', () => this.cb.onStopClick?.());
         $('btn-tor-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
         $('btn-about')?.addEventListener('click', () => this.el.aboutModal?.classList.remove('hidden'));
         $('btn-close-about')?.addEventListener('click', () => this.el.aboutModal?.classList.add('hidden'));
@@ -61,26 +59,25 @@ export class UIManager {
         if (this.el.distance) this.el.distance.textContent = mcuData?.front_distance_mm ?? '--';
         this.el.stopReasonHud?.classList.toggle('hidden', !isStopped);
         if (isStopped && this.el.stopReasonText) {
-            const r = mcuData?.stop_reason || 'NONE';
+            let r = mcuData?.stop_reason;
+            if (!r || r === 'NONE') {
+                r = uiState === UIState.EMERGENCY_STOP ? 'EMERGENCY_BUTTON' : 'OBSTACLE';
+            }
             this.el.stopReasonText.textContent = StopReasonText[r] || r;
         }
 
-        this.el.btnMode?.classList.toggle('hidden', isStopped || isTor);
-        this.el.btnReset?.classList.toggle('hidden', !isStopped);
-
-        if (!isStopped && !isTor && this.el.btnMode) {
+        if (this.el.btnMode) {
             if (this.el.btnModeText) this.el.btnModeText.textContent = isAuto ? 'AUTO MODE' : 'MANUAL MODE';
             this.el.btnMode.classList.toggle('auto-mode', isAuto);
             this.el.btnMode.classList.toggle('pending', isPending);
-            this.el.btnMode.disabled = isDis || isPending;
+            this.el.btnMode.disabled = isDis || isPending || isStopped || isTor;
         }
 
-        if (isStopped && this.el.btnReset) {
-            if (this.el.btnResetText) this.el.btnResetText.textContent = 'RESET / 再開';
-            this.el.btnReset.disabled = isDis;
+        if (this.el.btnStop) {
+            if (this.el.btnStopText) this.el.btnStopText.textContent = isStopped ? 'RESET' : 'STOP';
+            this.el.btnStop.classList.toggle('reset-mode', isStopped);
+            this.el.btnStop.disabled = isDis;
         }
-
-        if (this.el.btnStop) this.el.btnStop.disabled = isDis || uiState === UIState.EMERGENCY_STOP;
     }
 
     showError(msg) {

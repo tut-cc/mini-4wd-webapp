@@ -18,8 +18,8 @@ flowchart TB
             L2["タッチ＆ドラッグ: 2D仮想ジョイスティック (上下: スロットル / 左右: ステアリング)"]
         end
         subgraph Layer3["【最前面】極薄モノクロHUDオーバーレイ (HUD Overlay Layer)"]
-            L3A["上部: 接続 / 前方距離 / 各種操作・STOPボタン (白黒)"]
-            L3C["下部: AUTO/MANUAL切替ボタン / 停止解除ボタン (フラットモノクロ)"]
+            L3A["上部: 接続状態 / 前方距離 / INFOボタン (白黒)"]
+            L3C["下部: AUTO/MANUAL切替ボタン / STOPボタン / 停止解除ボタン (フラットモノクロ)"]
         end
     end
 ```
@@ -61,14 +61,14 @@ stateDiagram-v2
         MANUAL --> SAFE_STOP: Heartbeat (mode=SAFE_STOP) 受信 (障害物検知等)
         AUTO --> SAFE_STOP: Heartbeat (mode=SAFE_STOP) 受信 (障害物検知等)
 
-        SAFE_STOP --> MANUAL: 「RESET / RESUME」押下 & Heartbeat (mode=MANUAL)
+        SAFE_STOP --> MANUAL: 「RESET」押下 & Heartbeat (mode=MANUAL)
 
         MANUAL --> EMERGENCY_STOP: STOP押下 または Heartbeat受信
         AUTO --> EMERGENCY_STOP: STOP押下 または Heartbeat受信
         AUTO_TOR --> EMERGENCY_STOP: STOP押下 または Heartbeat受信
         SAFE_STOP --> EMERGENCY_STOP: STOP押下 または Heartbeat受信
 
-        EMERGENCY_STOP --> MANUAL: 「RESET STOP」押下 & Heartbeat (mode=MANUAL)
+        EMERGENCY_STOP --> MANUAL: 「RESET」押下 & Heartbeat (mode=MANUAL)
     }
 ```
 
@@ -78,15 +78,15 @@ stateDiagram-v2
 
 ### 操作可否一覧表
 
-| UI状態 | スロットル / ステアリング（タッチ・キー） | モード切替ボタン | 非常停止ボタン | 復帰 / リセットボタン | 画面表示・アラート |
-|---|---|---|---|---|---|
-| **MANUAL** | **有効**（操作送信） | 有効（`AUTO` 要求） | **有効**（即時発報） | 非表示 | FPVカメラ映像、前方距離HUD、薄型操作ガイド |
-| **AUTO_PENDING** | 無効 | 無効（「PENDING...」） | **有効** | 非表示 | モード要求 Pending 表示（モノクロバッジ） |
-| **AUTO** | 無効（ロック） | 有効（`MANUAL` 要求） | **有効** | 非表示 | 自動運転中ステータス表示（白黒反転バッジ） |
-| **AUTO_TOR** | 無効（引継ぎ優先） | 「TAKE OVER」強調 | **有効** | 非表示 | **白枠点滅オーバーレイ**、カウントダウン、TAKE OVERボタン |
-| **SAFE_STOP** | 無効（ロック） | 無効 | **有効** | **有効**（「RESET / RESUME」） | 停止理由（障害物/タイムアウト等）HUD表示 |
-| **EMERGENCY_STOP** | 無効（完全ロック） | 無効 | 無効（発報済） | **有効**（「RESET STOP」） | **白黒点滅アラート**、停止理由表示 |
-| **DISCONNECTED** | 無効（完全ロック） | 無効 | 無効 | 無効 | 切断オーバーレイ（自動再接続試行） |
+| UI状態 | スロットル / ステアリング（タッチ） | モード切替ボタン | STOP / RESET ボタン | 画面表示・アラート |
+|---|---|---|---|---|
+| **MANUAL** | **有効**（操作送信） | 有効（`AUTO` 要求） | **有効**（「STOP」即時発報） | FPVカメラ映像、前方距離HUD |
+| **AUTO_PENDING** | 無効 | 無効（「PENDING...」） | **有効**（「STOP」即時発報） | モード要求 Pending 表示（モノクロバッジ） |
+| **AUTO** | 無効（ロック） | 有効（`MANUAL` 要求） | **有効**（「STOP」即時発報） | 自動運転中ステータス表示（白黒反転バッジ） |
+| **AUTO_TOR** | 無効（引継ぎ優先） | 無効（ロック） | **有効**（「STOP」即時発報） | **白枠点滅オーバーレイ**、カウントダウン、TAKE OVERボタン |
+| **SAFE_STOP** | 無効（ロック） | 無効（ロック） | **有効**（「RESET」再開要求） | 停止理由（障害物/タイムアウト等）HUD表示 |
+| **EMERGENCY_STOP** | 無効（完全ロック） | 無効（ロック） | **有効**（「RESET」再開要求） | **白黒点滅アラート**、停止理由表示 |
+| **DISCONNECTED** | 無効（完全ロック） | 無効（ロック） | 無効 | 切断オーバーレイ（自動再接続試行） |
 
 ---
 

@@ -118,8 +118,17 @@ export class StateMachine {
         }
     }
 
+    requestStopAction() {
+        if (this.state === UIState.SAFE_STOP || this.state === UIState.EMERGENCY_STOP) {
+            this.requestResetStop();
+        } else {
+            this.requestEmergencyStop();
+        }
+    }
+
     requestEmergencyStop() {
         this.pendingEmergencyStop = true;
+        this.mcuData = { ...this.mcuData, mode: MCUMode.EMERGENCY_STOP, stop_reason: 'EMERGENCY_BUTTON' };
         this.clearTimer();
         this.transitionTo(UIState.EMERGENCY_STOP);
     }
