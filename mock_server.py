@@ -9,6 +9,22 @@ import sys
 # RFC 6455 WebSocket GUID
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+MIME_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".htm": "text/html; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+    ".txt": "text/plain; charset=utf-8",
+}
+
 class Mini4WDMockServer:
     def __init__(self, host="0.0.0.0", port=8765, scenarios_file="mock_scenarios.json"):
         self.host = host
@@ -153,72 +169,126 @@ class Mini4WDMockServer:
 
     async def handle_client(self, reader, writer):
         addr = writer.get_extra_info("peername")
-        print(f"\n[Client Connected] {addr}")
 
-        # WebSocket Handshake
         request = await reader.read(4096)
         if not request:
             writer.close()
             return
 
+        lines = request.decode("utf-8", errors="ignore").split("\r\n")
+        req_line = lines[0] if lines else ""
+        parts = req_line.split(" ")
+        method = parts[0] if len(parts) > 0 else "GET"
+        raw_path = parts[1] if len(parts) > 1 else "/"
+        path = raw_path.split("?")[0]
+
         headers = {}
-        for line in request.decode("utf-8", errors="ignore").split("\r\n")[1:]:
+        for line in lines[1:]:
             if ":" in line:
                 k, v = line.split(":", 1)
                 headers[k.strip().lower()] = v.strip()
 
         ws_key = headers.get("sec-websocket-key")
-        if not ws_key:
-            writer.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+
+        # 1. WebSocket Upgrade Request
+        if ws_key and headers.get("upgrade", "").lower() == "websocket":
+            print(f"\n[WS Connected] {addr}")
+            accept_val = base64.b64encode(
+                hashlib.sha1((ws_key + WS_GUID).encode("utf-8")).digest()
+            ).decode("utf-8")
+
+            response = (
+                "HTTP/1.1 101 Switching Protocols\r\n"
+                "Upgrade: websocket\r\n"
+                "Connection: Upgrade\r\n"
+                f"Sec-WebSocket-Accept: {accept_val}\r\n\r\n"
+            )
+            writer.write(response.encode("utf-8"))
+            await writer.drain()
+
+            self.clients.add(writer)
+            recv_buf = bytearray()
+
+            try:
+                while True:
+                    data = await reader.read(4096)
+                    if not data:
+                        break
+                    recv_buf.extend(data)
+
+                    while True:
+                        frame, consumed = self.parse_ws_frame(recv_buf)
+                        if frame is None:
+                            break
+                        recv_buf = recv_buf[consumed:]
+                        opcode, payload = frame
+
+                        if opcode == 0x8:  # Close
+                            return
+                        elif opcode == 0x9:  # Ping
+                            pong_frame = bytes([0x8A, 0x00])
+                            writer.write(pong_frame)
+                            await writer.drain()
+                        elif opcode == 0x1:  # Text JSON
+                            self.process_command(payload.decode("utf-8", errors="ignore"))
+
+            except Exception as e:
+                print(f"[WS Error] {addr}: {e}")
+            finally:
+                self.clients.discard(writer)
+                writer.close()
+                print(f"\n[WS Disconnected] {addr}")
+            return
+
+        # 2. HTTP Static File Request
+        if path == "/" or path == "":
+            rel_path = "index.html"
+        else:
+            rel_path = path.lstrip("/")
+
+        file_path = os.path.normpath(os.path.join(BASE_DIR, rel_path))
+        # Prevent directory traversal
+        if not file_path.startswith(BASE_DIR) or not os.path.isfile(file_path):
+            not_found_body = b"404 Not Found"
+            res = (
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-Type: text/plain; charset=utf-8\r\n"
+                f"Content-Length: {len(not_found_body)}\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8") + not_found_body
+            writer.write(res)
             await writer.drain()
             writer.close()
             return
 
-        accept_val = base64.b64encode(
-            hashlib.sha1((ws_key + WS_GUID).encode("utf-8")).digest()
-        ).decode("utf-8")
-
-        response = (
-            "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            f"Sec-WebSocket-Accept: {accept_val}\r\n\r\n"
-        )
-        writer.write(response.encode("utf-8"))
-        await writer.drain()
-
-        self.clients.add(writer)
-        recv_buf = bytearray()
-
         try:
-            while True:
-                data = await reader.read(4096)
-                if not data:
-                    break
-                recv_buf.extend(data)
+            with open(file_path, "rb") as f:
+                content = f.read()
 
-                while True:
-                    frame, consumed = self.parse_ws_frame(recv_buf)
-                    if frame is None:
-                        break
-                    recv_buf = recv_buf[consumed:]
-                    opcode, payload = frame
+            _, ext = os.path.splitext(file_path)
+            content_type = MIME_TYPES.get(ext.lower(), "application/octet-stream")
 
-                    if opcode == 0x8:  # Close
-                        return
-                    elif opcode == 0x9:  # Ping
-                        pong_frame = bytes([0x8A, 0x00])
-                        writer.write(pong_frame)
-                        await writer.drain()
-                    elif opcode == 0x1:  # Text JSON
-                        self.process_command(payload.decode("utf-8", errors="ignore"))
+            res_header = (
+                "HTTP/1.1 200 OK\r\n"
+                f"Content-Type: {content_type}\r\n"
+                f"Content-Length: {len(content)}\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8")
 
+            writer.write(res_header + content)
+            await writer.drain()
         except Exception as e:
-            print(f"[Client Error] {addr}: {e}")
+            err_body = f"500 Internal Server Error: {e}".encode("utf-8")
+            res = (
+                "HTTP/1.1 500 Internal Server Error\r\n"
+                "Content-Type: text/plain; charset=utf-8\r\n"
+                f"Content-Length: {len(err_body)}\r\n"
+                "Connection: close\r\n\r\n"
+            ).encode("utf-8") + err_body
+            writer.write(res)
+            await writer.drain()
         finally:
-            self.clients.discard(writer)
             writer.close()
-            print(f"\n[Client Disconnected] {addr}")
 
     def process_command(self, msg_str):
         try:
@@ -306,7 +376,9 @@ class Mini4WDMockServer:
     async def terminal_input_loop(self):
         loop = asyncio.get_event_loop()
         print("\n" + "="*50)
-        print(" Mini 4WD Mock MCU Server running on ws://localhost:8765")
+        print(f" Mini 4WD Mock MCU Server running on http://localhost:{self.port}")
+        print(f"   - WebApp URL:    http://localhost:{self.port}/")
+        print(f"   - WebSocket URL: ws://localhost:{self.port}/")
         print(" Interactive Keys: ")
         print("   [1] Manual Ready      [2] Auto Cruising")
         print("   [3] Trigger TOR (5s)  [4] Obstacle Stop")

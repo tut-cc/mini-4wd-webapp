@@ -86,7 +86,9 @@ const keysPressed = {
 // WebSocket Management
 let ws = null;
 const WS_PORT = 8765;
-const WS_URL = `ws://${location.hostname || 'localhost'}:${WS_PORT}`;
+const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsHost = location.host || `localhost:${WS_PORT}`;
+const WS_URL = `${wsProto}//${wsHost}`;
 
 function connectWebSocket() {
     try {

@@ -15,12 +15,14 @@ flowchart TB
     end
 
     subgraph Comm["通信ネットワーク (Wi-Fi)"]
+        HTTP_UI["WebApp配信 (HTTP / index.html, JS, CSS)"]
         WS_CH["制御・テレメトリ通信 (WebSocket / 双方向 100ms)"]
         CAM_CH["カメラ映像ストリーム (MJPEG / WebRTC / HTTP)"]
     end
 
     subgraph MCU["車載マイコン (ESP32 / Raspberry Pi 等)"]
-        WS_SVR["WebSocket / Web Server"]
+        HTTP_SVR["Web Server (WebApp静的ファイル配信)"]
+        WS_SVR["WebSocket Server (制御通信)"]
         CTRL["制御・状態管理コア (Source of Truth)"]
         FAIL["フェイルセーフ / デッドマン監視"]
         CAM_DRV["カメラキャプチャ・配信"]
@@ -48,36 +50,41 @@ flowchart TB
 
 ---
 
-## 2. 通信系統設計（2系統の分離）
-
-制御の即時性と映像配信の負荷を分離するため、2つの独立した通信経路を使用します。
+## 2. 通信系統設計
+車載マイコンは以下の3つの役割・通信経路を提供します。
 
 ```mermaid
 flowchart LR
-    subgraph WebApp["WebApp (ブラウザ)"]
+    subgraph WebApp["操作端末 / ブラウザ"]
+        W_STATIC["Web画面読み込み (HTML/CSS/JS)"]
         W_CTRL["制御・UIモジュール"]
         W_VIDEO["映像描画モジュール (Canvas / img)"]
     end
 
     subgraph Network["Wi-Fi 通信"]
         direction TB
+        HTTP_STATIC["【画面配信】 HTTP GET\n- index.html / app.js / style.css\n- 初回アクセス時"]
         WS["【制御系統】 WebSocket\n- 低遅延・軽量JSON\n- 100ms周期 双方向\n- 操作コマンド / Heartbeat"]
-        HTTP["【映像系統】 HTTP/MJPEG または WebRTC\n- 映像フレームストリーム\n- 制御とは非同期"]
+        HTTP_CAM["【映像系統】 HTTP/MJPEG または WebRTC\n- 映像フレームストリーム\n- 制御とは非同期"]
     end
 
     subgraph MCU["車載マイコン"]
+        M_HTTP["Web Server タスク"]
         M_CTRL["制御・状態管理タスク"]
         M_CAM["カメラ配信タスク"]
     end
 
+    W_STATIC <-- HTTP GET --> M_HTTP
     W_CTRL <--> WS <--> M_CTRL
-    M_CAM --> HTTP --> W_VIDEO
+    M_CAM --> HTTP_CAM --> W_VIDEO
 ```
 
-1. **制御・テレメトリ系統（WebSocket）**
+1. **WebApp配信系統（HTTP GET）**
+   - 操作端末がマイコンのIP/ポート（例: `http://localhost:8765/` や `http://192.168.4.1:8765/`）にアクセスすることで、マイコンから直接Web操作画面（HTML/JS/CSS）を配信します。
+2. **制御・テレメトリ系統（WebSocket）**
    - 操作コマンドの送信、マイコンからの定期Heartbeat（テレメトリ）送信用。
    - 軽量なJSONフォーマットを用い、100ms周期で低遅延にやり取りします。
-2. **映像配信系統（MJPEG / WebRTC / HTTP Stream）**
+3. **映像配信系統（MJPEG / WebRTC / HTTP Stream）**
    - カメラ映像専用のストリーム。
    - 制御通信のパケット遅延やブロッキングを防ぐため、完全に独立した経路として扱います。
 
