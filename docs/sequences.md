@@ -2,8 +2,6 @@
 
 本ドキュメントでは、WebApp と 車載マイコン（MCU）間の対話フローを、正常系・異常系・フェイルセーフの各シナリオにおけるシーケンス図として網羅します。
 
----
-
 ## 1. モード切替: MANUAL → AUTO
 
 WebAppからAUTO要求を出した際、マイコンの状態判定により分岐します。
@@ -42,8 +40,6 @@ sequenceDiagram
     end
 ```
 
----
-
 ## 2. モード切替: AUTO → MANUAL
 
 手動運転への復帰は安全確保のため、マイコン側で最優先で即時受諾されます。
@@ -73,8 +69,6 @@ sequenceDiagram
         W->>W: UIを MANUALモード に確定更新
     end
 ```
-
----
 
 ## 3. MANUALモードの方向操作と通信途絶（2軸仮想ジョイスティック・斜め走行）
 
@@ -118,8 +112,6 @@ sequenceDiagram
         M->>M: モーターを自動停止 (throttle=0, steering=0)
     end
 ```
-
----
 
 ## 4. TOR（Take Over Request）のライフサイクル
 
@@ -166,8 +158,6 @@ sequenceDiagram
     end
 ```
 
----
-
 ## 5. EMERGENCY_STOP の発報と復帰手順
 
 ```mermaid
@@ -202,8 +192,6 @@ sequenceDiagram
     end
 ```
 
----
-
 ## 6. SAFE_STOP からの復帰シーケンス
 
 ```mermaid
@@ -229,8 +217,6 @@ sequenceDiagram
     end
 ```
 
----
-
 ## 7. 通信切断と再接続
 
 ```mermaid
@@ -255,8 +241,6 @@ sequenceDiagram
     M->>W: Heartbeat (mode=SAFE_STOP, stop_reason=COMM_TIMEOUT)
     W->>W: DISCONNECTED から CONNECTED へ復帰<br/>マイコンの最新状態 SAFE_STOP を同期反映<br/>通知表示: 通信切断により安全停止しました
 ```
-
----
 
 ## 8. 関連ドキュメント
 

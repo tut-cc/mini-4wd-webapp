@@ -2,16 +2,12 @@
 
 本ドキュメントでは、WebApp と 車載マイコン（MCU）間で送受信される通信データのフォーマット、定常通信（Heartbeat）、各種タイムアウト閾値、および状態不一致時の安全判定ルールについて定義します。
 
----
-
 ## 1. 通信方式の概要
 - **WebApp画面配信**: HTTP GET（`index.html`, `js/*.js`, `style.css` 等をマイコンから直接配信）
 - **制御・テレメトリ通信**: WebSocket（双方向 / テキスト形式 JSON）
 - **文字コード**: UTF-8
 - **通信周期**: 100ms 周期（10 Hz）で双方向定期通信
 - **ポート統合**: 同一ポート（デフォルト: `8765`）で HTTP静的配信 と WebSocket制御 を同時に提供
-
----
 
 ## 2. データフォーマット仕様
 
@@ -38,8 +34,6 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
 | `mode_request` | `NONE` / `MANUAL` / `AUTO` | ○ | 運転モード切替要求（切替時以外は `NONE`） |
 | `emergency_stop_request` | `true` / `false` | ○ | 非常停止要求（最優先処理） |
 | `reset_stop_request` | `true` / `false` | ○ | SAFE_STOP / EMERGENCY_STOP の解除・リセット要求 |
-
----
 
 ### 2.2 マイコン → WebApp（Heartbeat / テレメトリ）
 
@@ -81,8 +75,6 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
 - `IN_EMERGENCY`: 非常停止中のため走行・切替要求を拒否
 - `MODE_MISMATCH`: WebAppの認識モードと実状態が不一致のため拒否
 
----
-
 ### 2.3 TOR（Take Over Request）の表現ルール
 
 TORは独立したモードではなく、**AUTOモード内でユーザーへ運転引き継ぎを促している一時状態**として定義します。
@@ -101,8 +93,6 @@ TOR発生時 (AUTO_TOR):
 
 WebAppは `tor_active: true` を受信した際に、UI内部で `AUTO_TOR` 状態として扱い、警告オーバーレイを表示します。
 
----
-
 ## 3. タイムアウト & 定常通信パラメータ一覧
 
 | パラメータ名 | 閾値 / 周期 | 監視主体 | 説明・タイムアウト時の動作 |
@@ -113,8 +103,6 @@ WebAppは `tor_active: true` を受信した際に、UI内部で `AUTO_TOR` 状�
 | **Pending タイムアウト** | `1,000 ms` | WebApp | 切替要求後、マイコンの状態が変わらない場合に要求失敗と判定 |
 | **通信切断判定** | `1,500 ms` | WebApp / MCU | Heartbeat途絶で `DISCONNECTED` 遷移、マイコンは `SAFE_STOP` |
 | **TOR 猶予時間** | `3,000 〜 5,000 ms` | マイコン | カウントダウンが0に達した場合、マイコンが `SAFE_STOP` へ自律遷移 |
-
----
 
 ## 4. 状態不一致時の安全判定マトリクス
 
@@ -133,8 +121,6 @@ WebAppの認識（`client_mode`）とマイコンの実際の状態（`mode`）�
 | **AUTO** (走行中) | MANUAL | `throttle != 0.0` (走行指示) | **破棄** | 自律制御優先のため手動操作を破棄 |
 | **SAFE_STOP** | MANUAL | `mode_request: AUTO` | **拒否** | 停止状態からのAUTO直行は拒否（要リセット） |
 | **SAFE_STOP** | SAFE_STOP | `reset_stop_request: true` | **安全確認後実行** | 障害物がクリアであれば `MANUAL` へ復帰 |
-
----
 
 ## 5. 関連ドキュメント
 
