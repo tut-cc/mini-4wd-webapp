@@ -265,6 +265,7 @@ html, body {
 
 .custom-slider {
     -webkit-appearance: none;
+    appearance: none;
     background: #334155;
     border-radius: 8px;
     outline: none;
@@ -272,6 +273,7 @@ html, body {
 
 .custom-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -279,6 +281,17 @@ html, body {
     border: 3px solid #ffffff;
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
     cursor: pointer;
+}
+
+.custom-slider::-moz-range-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-blue);
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    cursor: pointer;
+    border: none;
 }
 
 /* Gauges */
