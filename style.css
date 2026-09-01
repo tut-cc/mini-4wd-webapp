@@ -289,10 +289,7 @@ html, body {
 .modal-content h2, .disconnected-modal-card h2, .tor-title { font-size: 1.35rem; font-weight: 800; margin-bottom: 8px; }
 .modal-desc, .tor-description { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; }
 .modal-content ul { margin: 10px 0 20px 20px; line-height: 1.6; }
-.form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: 0.95rem; font-weight: 700; }
-.custom-input { width: 100%; padding: 12px 14px; border: 1.5px solid #000; border-radius: 6px; font-size: 1rem; outline: none; }
-.input-hint, .sub-text { font-size: 0.85rem; color: var(--text-muted); }
+.sub-text { font-size: 0.85rem; color: var(--text-muted); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 .btn {
@@ -307,8 +304,6 @@ html, body {
     cursor: pointer;
 }
 .btn:active { background: #fff; color: #000; }
-.btn-secondary { background: #fff; border: 1.5px solid #000; color: #000; }
-.btn-secondary:active { background: #000; color: #fff; }
 
 .tor-overlay {
     background: rgba(255, 255, 255, 0.88);

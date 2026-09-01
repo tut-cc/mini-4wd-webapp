@@ -43,8 +43,6 @@ export const Config = {
     WS_RECONNECT_DELAY_MS: 1500,
     MODE_SWITCH_TIMEOUT_MS: 1000,
     ALERT_DISPLAY_DURATION_MS: 3000,
-    DEFAULT_CAMERA_URL: '/video_feed',
-    STORAGE_KEY_CAMERA_URL: 'mini4wd_camera_url',
     TOUCH_MAX_DISTANCE: 60,
     INPUT_DEADBAND: 0.05
 };

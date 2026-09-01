@@ -27,9 +27,7 @@ export class UIManager {
             torOverlay: $('tor-overlay'),
             torCountdown: $('tor-countdown'),
             disOverlay: $('disconnected-overlay'),
-            aboutModal: $('about-modal'),
-            camModal: $('camera-modal'),
-            camInput: $('camera-url-input')
+            aboutModal: $('about-modal')
         };
 
         this.initEvents();
@@ -42,17 +40,6 @@ export class UIManager {
         $('btn-tor-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
         $('btn-about')?.addEventListener('click', () => this.el.aboutModal?.classList.remove('hidden'));
         $('btn-close-about')?.addEventListener('click', () => this.el.aboutModal?.classList.add('hidden'));
-
-        $('btn-camera-settings')?.addEventListener('click', () => {
-            if (this.el.camInput) this.el.camInput.value = localStorage.getItem(Config.STORAGE_KEY_CAMERA_URL) || Config.DEFAULT_CAMERA_URL;
-            this.el.camModal?.classList.remove('hidden');
-        });
-        $('btn-close-camera')?.addEventListener('click', () => this.el.camModal?.classList.add('hidden'));
-        $('btn-save-camera')?.addEventListener('click', () => {
-            const url = this.el.camInput?.value.trim() || Config.DEFAULT_CAMERA_URL;
-            this.cb.onCameraSettingsSave?.(url);
-            this.el.camModal?.classList.add('hidden');
-        });
     }
 
     renderState(uiState, mcuData) {

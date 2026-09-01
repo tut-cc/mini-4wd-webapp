@@ -46,7 +46,6 @@
           </div>
         </div>
         <div class="hud-group hud-right">
-          <button class="hud-btn" id="btn-camera-settings">CAM</button>
           <button class="hud-btn" id="btn-about">INFO</button>
           <button class="hud-btn emergency-btn" id="btn-emergency-stop">STOP</button>
         </div>
@@ -89,23 +88,6 @@
       <h2>DISCONNECTED</h2>
       <p>サーバーに接続しています...</p>
       <p class="sub-text">マイコンまたは mock_server.py の起動を確認してください</p>
-    </div>
-  </div>
-
-  <!-- Camera Settings Modal -->
-  <div id="camera-modal" class="modal hidden">
-    <div class="modal-content">
-      <h2>カメラ設定</h2>
-      <p class="modal-desc">車載カメラのMJPEGストリームURLを指定します。</p>
-      <div class="form-group">
-        <label for="camera-url-input">ストリーム URL:</label>
-        <input type="text" id="camera-url-input" class="custom-input" placeholder="/video_feed" value="/video_feed">
-        <small class="input-hint">標準: /video_feed, または http://192.168.4.1:81/stream 等</small>
-      </div>
-      <div class="modal-actions">
-        <button class="btn" id="btn-save-camera">保存</button>
-        <button class="btn btn-secondary" id="btn-close-camera">閉じる</button>
-      </div>
     </div>
   </div>
 
