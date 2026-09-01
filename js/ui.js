@@ -40,10 +40,6 @@ export class UIManager {
         this.el.btnStop?.addEventListener('click', () => this.cb.onEmergencyStopClick?.());
         this.el.btnReset?.addEventListener('click', () => this.cb.onResetStopClick?.());
         $('btn-tor-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
-
-        $('btn-fullscreen')?.addEventListener('click', () => {
-            document.fullscreenElement ? document.exitFullscreen().catch(() => {}) : document.documentElement.requestFullscreen().catch(() => {});
-        });
         $('btn-about')?.addEventListener('click', () => this.el.aboutModal?.classList.remove('hidden'));
         $('btn-close-about')?.addEventListener('click', () => this.el.aboutModal?.classList.add('hidden'));
 
