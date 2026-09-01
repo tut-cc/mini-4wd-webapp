@@ -58,8 +58,10 @@ KEYMAP = {
     "5": "emergency_stop"
 }
 
+DEFAULT_SCENARIOS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios.json")
+
 class ScenarioManager:
-    def __init__(self, controller: VehicleController, scenarios_file: str = "mock_scenarios.json"):
+    def __init__(self, controller: VehicleController, scenarios_file: str = DEFAULT_SCENARIOS_FILE):
         self.controller = controller
         self.scenarios_file = scenarios_file
         self.scenarios = {}

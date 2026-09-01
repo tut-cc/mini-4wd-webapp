@@ -13,7 +13,7 @@ from mock.camera import MockCameraProvider
 from mock.scenario import ScenarioManager
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SCENARIOS_FILE = os.path.join(BASE_DIR, "mock_scenarios.json")
+SCENARIOS_FILE = os.path.join(BASE_DIR, "mock", "scenarios.json")
 
 async def main():
     # 1. 共通制御コア (Source of Truth & 安全判定)

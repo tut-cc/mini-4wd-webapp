@@ -56,7 +56,8 @@ mini-4wd-webapp/
 │
 ├── mock/                       # モック開発専用パッケージ
 │   ├── camera.py               # 疑似コース・障害物描画カメラ (PNG生成)
-│   └── scenario.py             # テストシナリオ管理 (1〜5キー切替)
+│   ├── scenario.py             # テストシナリオ管理 (1〜5キー切替)
+│   └── scenarios.json          # シナリオ定義データ
 │
 ├── mock_server.py              # モック起動エントリポイント
 └── examples/
