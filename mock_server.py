@@ -46,6 +46,7 @@ class CameraStreamGenerator:
 
         mode = state.get("mode", "MANUAL")
         dist = state.get("front_distance_mm", 1200)
+        stop_reason = state.get("stop_reason", "NONE")
 
         if mode == "AUTO":
             speed = 0.8
@@ -60,9 +61,9 @@ class CameraStreamGenerator:
         self.road_offset = (self.road_offset + speed * 6.0) % 40.0
         self.lateral_offset += (steer * 20.0 - self.lateral_offset) * 0.15
 
-        horizon_y = int(h * 0.52)
-        track_top_w = 16
-        track_bottom_w = int(w * 0.72)
+        horizon_y = int(h * 0.48)
+        track_top_w = 24
+        track_bottom_w = int(w * 0.78)
         vanish_x = int(w / 2 + self.lateral_offset)
 
         raw = bytearray((w + 1) * h)
@@ -72,13 +73,14 @@ class CameraStreamGenerator:
             raw[row_start] = 0  # Filter type 0 (None)
 
             if y < horizon_y:
-                # Sky
+                # 明るい空 (ライトグレー〜白)
+                sky_val = 245
                 for x in range(w):
-                    raw[row_start + 1 + x] = 0
+                    raw[row_start + 1 + x] = sky_val
             elif y == horizon_y:
-                # Horizon line
+                # 地平線
                 for x in range(w):
-                    raw[row_start + 1 + x] = 60
+                    raw[row_start + 1 + x] = 190
             else:
                 dy = y - horizon_y
                 ratio = dy / (h - horizon_y)
@@ -90,27 +92,34 @@ class CameraStreamGenerator:
                 center_x = curr_vanish_x
 
                 for x in range(w):
-                    val = 15
+                    # コース外 (明るい背景)
+                    val = 230
 
                     if left_x <= x <= right_x:
-                        val = 30
+                        # コース路面 (明るいアスファルトグレー)
+                        val = 210
 
-                    if abs(x - left_x) <= 1 or abs(x - right_x) <= 1:
-                        val = 220
-                    elif abs(x - center_x) <= 1 and ((int(y + self.road_offset)) // 8) % 2 == 0:
-                        val = 180
+                    # コース境界の縁石・ライン
+                    if abs(x - left_x) <= 2 or abs(x - right_x) <= 2:
+                        # 縁石パターン (白黒交互)
+                        curb_stripe = ((int(y + self.road_offset)) // 6) % 2 == 0
+                        val = 40 if curb_stripe else 255
+                    elif abs(x - center_x) <= 1 and ((int(y + self.road_offset)) // 10) % 2 == 0:
+                        # 中央破線 (濃いグレー)
+                        val = 60
 
-                    if dist < 2000:
-                        dist_norm = max(0.05, min(1.0, dist / 2000.0))
-                        obs_y = horizon_y + int((1.0 - dist_norm) * (h * 0.42))
-                        obs_w = int(16 + (1.0 - dist_norm) * 70)
-                        obs_h = int(8 + (1.0 - dist_norm) * 26)
+                    # 障害物検知時のみ障害物を描画 (distが近い場合または障害物停止時)
+                    if (dist < 600 or stop_reason == "OBSTACLE") and dist < 1500:
+                        dist_norm = max(0.05, min(1.0, dist / 1500.0))
+                        obs_y = horizon_y + int((1.0 - dist_norm) * (h * 0.40))
+                        obs_w = int(14 + (1.0 - dist_norm) * 60)
+                        obs_h = int(8 + (1.0 - dist_norm) * 24)
                         obs_center_x = int(vanish_x * (1.0 - (1.0 - dist_norm)))
 
                         if obs_y <= y <= obs_y + obs_h:
                             if abs(x - obs_center_x) <= obs_w // 2:
-                                if y == obs_y or y == obs_y + obs_h or abs(x - obs_center_x) >= obs_w // 2 - 1:
-                                    val = 255
+                                # 障害物ブロック (濃いグレー/黒)
+                                val = 40
 
                     raw[row_start + 1 + x] = val
 

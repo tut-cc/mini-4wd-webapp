@@ -3,43 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>ミニ四駆自動運転 WebApp - FPV Cockpit</title>
-  <meta name="description" content="Mini 4WD Autonomous Driving Controller">
+  <title>ミニ四駆 コントローラー</title>
+  <meta name="description" content="Mini 4WD Controller">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="app-container" id="app-container">
 
-    <!-- 1. Video & FPV Background Layer (車載マイコンから配信されるカメラ映像) -->
+    <!-- 1. Video Background Layer (車載カメラ映像) -->
     <div class="video-background-layer" id="video-layer">
-      <!-- リアルタイム車載カメラストリーム (MJPEG / Server-side Stream) -->
-      <img id="camera-stream" class="camera-stream" src="/video_feed" alt="RC FPV Live Stream" crossorigin="anonymous">
-
-      <!-- カメラ映像ステータスバッジ -->
-      <div class="camera-status-hud" id="camera-status-hud">
-        <span class="live-indicator-dot"></span>
-        <span id="camera-mode-label">LIVE</span>
-      </div>
-
-      <!-- 中央照準 / レーシングHUDガイド (極薄モノクロガイド) -->
-      <div class="hud-crosshair" id="hud-crosshair">
-        <div class="crosshair-center"></div>
-        <div class="crosshair-h-line"></div>
-        <div class="crosshair-v-line"></div>
-        <div class="steering-guide-marker" id="steering-guide-marker"></div>
-      </div>
+      <!-- リアルタイム車載カメラストリーム -->
+      <img id="camera-stream" class="camera-stream" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
     </div>
 
-    <!-- 2. Invisible Touch Control Layer (左右分割・ブラインドタッチ操作ゾーン) -->
+    <!-- 2. Invisible Touch Control Layer (左右分割・スマホ親指ブラインド操作ゾーン) -->
     <div class="touch-control-layer" id="touch-layer">
       <!-- 左親指ゾーン: スロットル (前後) -->
       <div class="touch-zone throttle-zone" id="touch-throttle-zone">
-        <div class="touch-hint left-hint">
-          <div class="hint-icon">▲</div>
-          <div class="hint-label">THROTTLE</div>
-          <div class="hint-icon">▼</div>
-        </div>
-        <!-- タッチ時に出現するバーチャルノブ (シンプル白枠) -->
+        <!-- タッチ時に出現するバーチャルノブ (ライトテーマ) -->
         <div class="touch-joystick-base hidden" id="throttle-joystick-base">
           <div class="touch-joystick-track vertical-track"></div>
           <div class="touch-joystick-thumb" id="throttle-joystick-thumb"></div>
@@ -48,12 +29,7 @@
 
       <!-- 右親指ゾーン: ステアリング (左右) -->
       <div class="touch-zone steering-zone" id="touch-steering-zone">
-        <div class="touch-hint right-hint">
-          <div class="hint-icon">◀</div>
-          <div class="hint-label">STEERING</div>
-          <div class="hint-icon">▶</div>
-        </div>
-        <!-- タッチ時に出現するバーチャルノブ (シンプル白枠) -->
+        <!-- タッチ時に出現するバーチャルノブ (ライトテーマ) -->
         <div class="touch-joystick-base hidden" id="steering-joystick-base">
           <div class="touch-joystick-track horizontal-track"></div>
           <div class="touch-joystick-thumb" id="steering-joystick-thumb"></div>
@@ -61,64 +37,61 @@
       </div>
     </div>
 
-    <!-- 3. Translucent HUD Overlay Layer (極薄モノクロHUD) -->
+    <!-- 3. HUD Overlay Layer (ライトテーマ・シンプル・大文字) -->
     <div class="hud-overlay-layer">
       <!-- Top HUD Bar -->
       <header class="hud-top-bar">
-        <!-- 左上: 接続・モード・システム情報 -->
+        <!-- 左上: 接続状態 -->
         <div class="hud-group hud-left">
           <div class="hud-badge status-badge" id="ws-status">
             <span class="status-dot"></span>
-            <span id="ws-status-text">WS: 接続中...</span>
+            <span id="ws-status-text">接続中</span>
           </div>
-          <div class="hud-badge mode-badge" id="mode-badge">MANUAL</div>
-          <div class="hud-badge fps-badge" id="fps-counter">60 FPS</div>
-          <div class="hud-badge gamepad-badge hidden" id="gamepad-status">PAD</div>
         </div>
 
-        <!-- 中央上: 前方距離HUD -->
+        <!-- 中央上: 前方障害物距離 (大文字で見やすい) -->
         <div class="hud-group hud-center">
           <div class="distance-hud-card" id="distance-hud-card">
-            <span class="distance-label">DIST</span>
+            <span class="distance-label">前方距離</span>
             <span class="distance-val" id="distance-badge">1200</span>
             <span class="distance-unit">mm</span>
           </div>
         </div>
 
-        <!-- 右上: アクションボタン (非常停止・カメラ設定・フルスクリーン) -->
+        <!-- 右上: アクションボタン (CAM, INFO, FULL, STOP) -->
         <div class="hud-group hud-right">
-          <button class="hud-btn cam-btn" id="btn-camera-settings" title="カメラ設定">CAM</button>
-          <button class="hud-btn info-btn" id="btn-about" title="システム仕様">INFO</button>
-          <button class="hud-btn fs-btn" id="btn-fullscreen" title="全画面表示">FULL</button>
+          <button class="hud-btn" id="btn-camera-settings" title="カメラ設定">CAM</button>
+          <button class="hud-btn" id="btn-about" title="情報">INFO</button>
+          <button class="hud-btn" id="btn-fullscreen" title="全画面表示">全画面</button>
           <button class="hud-btn emergency-btn" id="btn-emergency-stop">STOP</button>
         </div>
       </header>
 
-      <!-- Notification / Reject banner (モノクロアラート) -->
+      <!-- 通知 / エラーバナー (ライトモノクロ) -->
       <div id="alert-banner" class="hud-alert-banner hidden">
         <span id="alert-message">エラー通知</span>
       </div>
 
-      <!-- 画面左右端のミニマルHUDインジケーター (極細白ライン) -->
+      <!-- 画面左右端のミニマルゲージ (ライトテーマ) -->
       <div class="hud-sidebar hud-sidebar-left">
         <div class="slim-gauge-container">
+          <div class="slim-gauge-label">THR</div>
           <div class="slim-gauge-bar-track vertical">
             <div class="slim-gauge-bar-fill" id="throttle-bar-fill"></div>
             <div class="slim-gauge-center-line"></div>
           </div>
           <div class="slim-gauge-val" id="throttle-value">0%</div>
-          <div class="slim-gauge-label">THR</div>
         </div>
       </div>
 
       <div class="hud-sidebar hud-sidebar-right">
         <div class="slim-gauge-container">
+          <div class="slim-gauge-label">STR</div>
           <div class="slim-gauge-bar-track horizontal">
             <div class="slim-gauge-bar-fill" id="steering-bar-fill"></div>
             <div class="slim-gauge-center-line horizontal-center"></div>
           </div>
           <div class="slim-gauge-val" id="steering-value">0%</div>
-          <div class="slim-gauge-label">STR</div>
         </div>
       </div>
 
@@ -126,36 +99,27 @@
       <div class="hud-center-actions">
         <!-- 停止理由表示 (停止時のみ表示) -->
         <div class="stop-reason-hud hidden" id="stop-reason-hud">
-          <span class="stop-reason-label">REASON:</span>
+          <span class="stop-reason-label">停止理由:</span>
           <span class="stop-reason-text" id="status-stop-reason">NONE</span>
         </div>
 
-        <!-- メインモード切替ボタン -->
+        <!-- メインモード切替ボタン (大文字・タップしやすい) -->
         <button class="hud-action-btn" id="btn-drive-mode">
-          <span class="btn-text" id="btn-drive-mode-text">AUTO MODE</span>
+          <span class="btn-text" id="btn-drive-mode-text">MANUAL MODE</span>
         </button>
 
         <!-- 安全停止・非常停止からの復帰ボタン -->
         <button class="hud-action-btn reset-action-btn hidden" id="btn-reset-stop">
-          <span class="btn-text" id="btn-reset-stop-text">RESET / RESUME</span>
+          <span class="btn-text" id="btn-reset-stop-text">RESET / 再開</span>
         </button>
       </div>
 
-      <!-- Bottom Status Bar (操作ヒント) -->
-      <footer class="hud-bottom-bar">
-        <div class="touch-guide-text">
-          <span>LEFT: <strong>THROTTLE</strong></span>
-          <span class="separator">/</span>
-          <span>RIGHT: <strong>STEERING</strong></span>
-          <span class="separator">/</span>
-          <span class="desktop-guide">KEY: <strong>WASD</strong>, <strong>SPACE</strong> (STOP)</span>
-        </div>
-      </footer>
+
     </div>
 
   </div>
 
-  <!-- 4. Overlays & Modals (モノクロ) -->
+  <!-- 4. Overlays & Modals (ライトテーマ・完全モノクロ) -->
 
   <!-- TOR (Take Over Request) Overlay -->
   <div id="tor-overlay" class="tor-overlay hidden">
@@ -163,9 +127,9 @@
       <h2 class="tor-title">TAKE OVER REQUEST</h2>
       <p class="tor-description">自動運転の継続が困難です。手動操作へ引き継いでください。</p>
       <div class="tor-timer">
-        REMAINING: <span id="tor-countdown">5.0</span>s
+        残り時間: <span id="tor-countdown">5.0</span> 秒
       </div>
-      <button class="btn tor-takeover-btn" id="btn-tor-takeover">TAKE OVER</button>
+      <button class="btn tor-takeover-btn" id="btn-tor-takeover">手動操作に切り替える</button>
     </div>
   </div>
 
@@ -174,7 +138,7 @@
     <div class="disconnected-modal-card">
       <div class="spinner"></div>
       <h2>DISCONNECTED</h2>
-      <p>WebSocket (ws://localhost:8765) に再接続中...</p>
+      <p>サーバーに接続しています...</p>
       <p class="sub-text">マイコンまたは mock_server.py の起動を確認してください</p>
     </div>
   </div>
@@ -182,34 +146,34 @@
   <!-- Camera Settings Modal -->
   <div id="camera-modal" class="modal hidden">
     <div class="modal-content">
-      <h2>CAMERA STREAM SETTINGS</h2>
-      <p class="modal-desc">車載マイコンまたは外部カメラのMJPEGストリームURLを指定できます。</p>
+      <h2>カメラ設定</h2>
+      <p class="modal-desc">車載カメラのMJPEGストリームURLを指定します。</p>
 
       <div class="form-group" id="camera-url-group">
-        <label for="camera-url-input">STREAM URL:</label>
+        <label for="camera-url-input">ストリーム URL:</label>
         <input type="text" id="camera-url-input" class="custom-input" placeholder="/video_feed" value="/video_feed">
         <small class="input-hint">標準: /video_feed, または http://192.168.4.1:81/stream 等</small>
       </div>
 
       <div class="modal-actions">
-        <button class="btn" id="btn-save-camera">SAVE</button>
-        <button class="btn btn-secondary" id="btn-close-camera">CLOSE</button>
+        <button class="btn" id="btn-save-camera">保存</button>
+        <button class="btn btn-secondary" id="btn-close-camera">閉じる</button>
       </div>
     </div>
   </div>
 
-  <!-- About / Specs Modal -->
+  <!-- About Modal -->
   <div id="about-modal" class="modal hidden">
     <div class="modal-content">
-      <h2>ABOUT CONTROLLER</h2>
-      <p class="modal-desc">ミニ四駆 FPV コントローラー WebApp</p>
+      <h2>ミニ四駆 コントローラー</h2>
+      <p class="modal-desc">シンプル・ライトテーマ モバイルコントローラー</p>
       <ul>
-        <li><strong>FPV VIEW:</strong> 車載マイコンからのリアルタイム映像ストリーム (/video_feed)</li>
-        <li><strong>BLIND TOUCH:</strong> 画面を見ずに左親指でスロットル、右親指でステアリング操作</li>
-        <li><strong>SOURCE OF TRUTH:</strong> マイコン確定状態を同期 (100ms)</li>
+        <li><strong>スマホ操作:</strong> 画面左でスロットル (前後)、画面右でステアリング (左右)</li>
+        <li><strong>PC操作:</strong> 矢印キー（↑↓←→）のみ</li>
+        <li><strong>安全機能:</strong> STOPボタンで即時停止</li>
       </ul>
       <div class="modal-actions">
-        <button class="btn" id="btn-close-about">CLOSE</button>
+        <button class="btn" id="btn-close-about">閉じる</button>
       </div>
     </div>
   </div>

@@ -330,24 +330,37 @@ class InputController {
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
 
-            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') this.keys.up = true;
-            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') this.keys.down = true;
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') this.keys.left = true;
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') this.keys.right = true;
-
-            if (e.key === ' ' || e.code === 'Space') {
+            if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                if (this.onEmergencyStop) this.onEmergencyStop();
+                this.keys.up = true;
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.keys.down = true;
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.keys.left = true;
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.keys.right = true;
             }
 
             this.updateFromKeyboard();
         });
 
         window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') this.keys.up = false;
-            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') this.keys.down = false;
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') this.keys.left = false;
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') this.keys.right = false;
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.keys.up = false;
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.keys.down = false;
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.keys.left = false;
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.keys.right = false;
+            }
 
             this.updateFromKeyboard();
         });
@@ -436,6 +449,8 @@ class CameraManager {
 
         if (this.cameraStreamImg) {
             this.cameraStreamImg.src = this.streamUrl;
+        }
+        if (this.cameraModeLabel) {
             this.cameraModeLabel.textContent = 'LIVE';
         }
     }
@@ -551,8 +566,20 @@ class UIManager {
         const dist = (mcuData && mcuData.front_distance_mm !== undefined) ? mcuData.front_distance_mm : '--';
         const stopReason = mcuData ? (StopReasonText[mcuData.stop_reason] || mcuData.stop_reason) : 'NONE';
 
-        this.modeBadge.textContent = uiState;
-        this.modeBadge.className = `hud-badge mode-badge mode-${uiState.toLowerCase().replace('_', '')}`;
+        if (this.modeBadge) {
+            let displayMode = uiState;
+            if (uiState === UIState.MANUAL_PENDING) {
+                displayMode = 'MANUAL';
+            } else if (uiState === UIState.AUTO_PENDING) {
+                displayMode = 'AUTO';
+            } else if (uiState === UIState.EMERGENCY_STOP) {
+                displayMode = 'STOP';
+            } else if (uiState === UIState.SAFE_STOP) {
+                displayMode = 'SAFE STOP';
+            }
+            this.modeBadge.textContent = displayMode;
+            this.modeBadge.className = `hud-badge mode-badge mode-${uiState.toLowerCase().replace('_', '')}`;
+        }
         this.distanceBadge.textContent = String(dist);
 
         if (uiState === UIState.SAFE_STOP || uiState === UIState.EMERGENCY_STOP) {
@@ -566,7 +593,7 @@ class UIManager {
             case UIState.DISCONNECTED:
                 this.disconnectedOverlay.classList.remove('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: OFFLINE';
+                this.wsStatusText.textContent = '未接続';
                 this.wsStatus.className = 'hud-badge status-badge disconnected';
 
                 this.btnDriveMode.disabled = true;
@@ -577,11 +604,11 @@ class UIManager {
             case UIState.MANUAL:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
                 this.btnDriveMode.classList.remove('hidden', 'auto-mode', 'pending');
-                this.btnDriveModeText.textContent = 'AUTO MODE';
+                this.btnDriveModeText.textContent = 'MANUAL MODE';
                 this.btnDriveMode.disabled = false;
 
                 this.btnResetStop.classList.add('hidden');
@@ -591,12 +618,12 @@ class UIManager {
             case UIState.AUTO_PENDING:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
-                this.btnDriveMode.classList.remove('hidden', 'auto-mode');
-                this.btnDriveMode.classList.add('pending');
-                this.btnDriveModeText.textContent = 'PENDING...';
+                this.btnDriveMode.classList.remove('hidden');
+                this.btnDriveMode.classList.add('auto-mode', 'pending');
+                this.btnDriveModeText.textContent = 'AUTO MODE';
                 this.btnDriveMode.disabled = true;
 
                 this.btnResetStop.classList.add('hidden');
@@ -606,12 +633,12 @@ class UIManager {
             case UIState.MANUAL_PENDING:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
-                this.btnDriveMode.classList.remove('hidden');
-                this.btnDriveMode.classList.add('auto-mode', 'pending');
-                this.btnDriveModeText.textContent = 'PENDING...';
+                this.btnDriveMode.classList.remove('hidden', 'auto-mode');
+                this.btnDriveMode.classList.add('pending');
+                this.btnDriveModeText.textContent = 'MANUAL MODE';
                 this.btnDriveMode.disabled = true;
 
                 this.btnResetStop.classList.add('hidden');
@@ -621,12 +648,12 @@ class UIManager {
             case UIState.AUTO:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
                 this.btnDriveMode.classList.remove('hidden', 'pending');
                 this.btnDriveMode.classList.add('auto-mode');
-                this.btnDriveModeText.textContent = 'MANUAL MODE';
+                this.btnDriveModeText.textContent = 'AUTO MODE';
                 this.btnDriveMode.disabled = false;
 
                 this.btnResetStop.classList.add('hidden');
@@ -636,7 +663,7 @@ class UIManager {
             case UIState.AUTO_TOR:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.remove('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
                 if (mcuData && mcuData.tor_remaining_ms !== undefined) {
@@ -652,12 +679,12 @@ class UIManager {
             case UIState.SAFE_STOP:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
                 this.btnDriveMode.classList.add('hidden');
                 this.btnResetStop.classList.remove('hidden');
-                this.btnResetStopText.textContent = 'RESUME / RESET';
+                this.btnResetStopText.textContent = 'RESET / 再開';
                 this.btnResetStop.disabled = false;
                 this.btnEmergencyStop.disabled = false;
                 break;
@@ -665,12 +692,12 @@ class UIManager {
             case UIState.EMERGENCY_STOP:
                 this.disconnectedOverlay.classList.add('hidden');
                 this.torOverlay.classList.add('hidden');
-                this.wsStatusText.textContent = 'WS: ONLINE';
+                this.wsStatusText.textContent = '接続中';
                 this.wsStatus.className = 'hud-badge status-badge connected';
 
                 this.btnDriveMode.classList.add('hidden');
                 this.btnResetStop.classList.remove('hidden');
-                this.btnResetStopText.textContent = 'RESET STOP';
+                this.btnResetStopText.textContent = 'RESET / 再開';
                 this.btnResetStop.disabled = false;
                 this.btnEmergencyStop.disabled = true;
                 break;
@@ -704,22 +731,28 @@ class UIManager {
             this.steeringBarFill.style.width = `${Math.abs(steering) * 50}%`;
         }
 
-        const markerX = steering * 30;
-        this.steeringGuideMarker.style.transform = `translate(calc(-50% + ${markerX}px), -50%)`;
+        if (this.steeringGuideMarker) {
+            const markerX = steering * 30;
+            this.steeringGuideMarker.style.transform = `translate(calc(-50% + ${markerX}px), -50%)`;
+        }
     }
 
     updateGamepadStatus(active) {
-        if (active) {
-            this.gamepadStatus.classList.remove('hidden');
-            this.gamepadStatus.classList.add('active');
-        } else {
-            this.gamepadStatus.classList.add('hidden');
-            this.gamepadStatus.classList.remove('active');
+        if (this.gamepadStatus) {
+            if (active) {
+                this.gamepadStatus.classList.remove('hidden');
+                this.gamepadStatus.classList.add('active');
+            } else {
+                this.gamepadStatus.classList.add('hidden');
+                this.gamepadStatus.classList.remove('active');
+            }
         }
     }
 
     updateFPS(fps) {
-        this.fpsCounter.textContent = `${fps} FPS`;
+        if (this.fpsCounter) {
+            this.fpsCounter.textContent = `${fps} FPS`;
+        }
     }
 
     showError(msg) {
