@@ -119,6 +119,5 @@ export const Config = Object.freeze({
 
     // 入力制御パラメータ
     TOUCH_MAX_DISTANCE: 60,         // ジョイスティック最大移動距離 (px)
-    INPUT_DEADBAND: 0.05,           // タッチ/マウスの不感帯
-    GAMEPAD_DEADBAND: 0.08          // ゲームパッドスティック不感帯
+    INPUT_DEADBAND: 0.05            // タッチ/マウスの不感帯
 });

@@ -45,9 +45,6 @@ export class Mini4WDApp {
             this.lastFpsTimestamp = timestamp;
         }
 
-        this.input.pollGamepad();
-        this.ui.updateGamepadStatus(this.input.gamepadConnected);
-
         const currentThrottle = this.input.getThrottle();
         const currentSteering = this.input.getSteering();
 
