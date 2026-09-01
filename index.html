@@ -17,7 +17,7 @@
     </div>
   </div>
 
-  <!-- HUD ヘッダー (状態 / 距離) -->
+  <!-- HUD ヘッダー (状態 / 距離 / INFO) -->
   <header class="top-bar">
     <div id="status-badge" class="badge">
       <span class="status-dot"></span>
@@ -28,6 +28,7 @@
       <span id="distance-val" class="val">1200</span>
       <span class="unit">mm</span>
     </div>
+    <button id="btn-info" class="btn btn-sm">INFO</button>
   </header>
 
   <!-- アラート通知 -->
@@ -59,6 +60,22 @@
       <h2>DISCONNECTED</h2>
       <p>サーバーに接続しています...</p>
       <p class="muted">マイコンまたは mock_server.py の起動を確認してください</p>
+    </div>
+  </div>
+
+  <!-- INFO モーダル -->
+  <div id="info-modal" class="overlay backdrop hidden">
+    <div class="card">
+      <h2>操作・機能ガイド</h2>
+      <p class="muted">ミニ四駆 FPV コントローラー</p>
+      <ul>
+        <li><strong>走行操作:</strong> 画面をタッチ＆スワイプ（上下で前後、左右でステアリング）</li>
+        <li><strong>自動運転:</strong> AUTO MODE ボタンで切替要求</li>
+        <li><strong>緊急停止:</strong> STOP ボタンで即時停止（停止後は RESET で復旧）</li>
+      </ul>
+      <div class="modal-actions">
+        <button id="btn-close-info" class="btn">閉じる</button>
+      </div>
     </div>
   </div>
 
