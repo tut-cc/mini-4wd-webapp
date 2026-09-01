@@ -22,8 +22,7 @@ export class UIManager {
             alert: $('alert-banner'),
             torOverlay: $('tor-overlay'),
             torCountdown: $('tor-countdown'),
-            disOverlay: $('disconnected-overlay'),
-            aboutModal: $('about-modal')
+            disOverlay: $('disconnected-overlay')
         };
 
         this.initEvents();
@@ -33,8 +32,6 @@ export class UIManager {
         this.el.btnMode?.addEventListener('click', () => this.cb.onDriveModeClick?.());
         this.el.btnStop?.addEventListener('click', () => this.cb.onStopClick?.());
         $('btn-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
-        $('btn-about')?.addEventListener('click', () => this.el.aboutModal?.classList.remove('hidden'));
-        $('btn-close-about')?.addEventListener('click', () => this.el.aboutModal?.classList.add('hidden'));
     }
 
     renderState(uiState, mcuData) {
