@@ -63,7 +63,7 @@ class Mini4WDMockServer:
     def __init__(self, host="0.0.0.0", port=8765, scenarios_file="mock_scenarios.json"):
         self.host, self.port, self.scenarios_file = host, port, scenarios_file
         self.clients = set()
-        self.state = {"mode": "MANUAL", "front_distance_mm": 1200, "tor_active": False, "tor_remaining_ms": 0, "stop_reason": "NONE", "request_reject_reason": "NONE", "heartbeat_seq": 0}
+        self.state = {"mode": "MANUAL", "front_distance_mm": 1200, "tor_active": False, "tor_remaining_ms": 0, "stop_reason": "NONE", "request_reject_reason": "NONE"}
         self.throttle, self.steering = 0.0, 0.0
         self.camera = CameraStreamGenerator()
         self.load_scenarios()
@@ -203,7 +203,6 @@ class Mini4WDMockServer:
 
     async def heartbeat_loop(self):
         while True:
-            self.state["heartbeat_seq"] = (self.state["heartbeat_seq"] + 1) % 65536
             if self.state["tor_active"] and self.state["tor_remaining_ms"] > 0:
                 self.state["tor_remaining_ms"] -= 100
                 if self.state["tor_remaining_ms"] <= 0:

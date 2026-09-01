@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container" id="app-container">
+  <div class="app-container">
     <!-- 車載カメラ映像 -->
-    <div class="video-background-layer" id="video-layer">
+    <div class="video-background-layer">
       <img id="camera-stream" class="camera-stream" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
     </div>
 
@@ -25,20 +25,20 @@
     <!-- HUD オーバーレイ -->
     <div class="hud-overlay-layer">
       <header class="hud-top-bar">
-        <div class="hud-group hud-left">
+        <div class="hud-group">
           <div class="hud-badge status-badge" id="ws-status">
             <span class="status-dot"></span>
             <span id="ws-status-text">接続中</span>
           </div>
         </div>
-        <div class="hud-group hud-center">
+        <div class="hud-group">
           <div class="distance-hud-card">
             <span class="distance-label">前方距離</span>
             <span class="distance-val" id="distance-badge">1200</span>
             <span class="distance-unit">mm</span>
           </div>
         </div>
-        <div class="hud-group hud-right">
+        <div class="hud-group">
           <button class="hud-btn" id="btn-about">INFO</button>
         </div>
       </header>
@@ -55,10 +55,10 @@
         </div>
         <div class="hud-action-row">
           <button class="hud-action-btn" id="btn-drive-mode">
-            <span class="btn-text" id="btn-drive-mode-text">MANUAL MODE</span>
+            <span id="btn-drive-mode-text">MANUAL MODE</span>
           </button>
           <button class="hud-action-btn emergency-btn" id="btn-emergency-stop">
-            <span class="btn-text" id="btn-emergency-stop-text">STOP</span>
+            <span id="btn-emergency-stop-text">STOP</span>
           </button>
         </div>
       </div>

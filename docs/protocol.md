@@ -52,8 +52,7 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
   "tor_active": true,
   "tor_remaining_ms": 3500,
   "stop_reason": "NONE",
-  "request_reject_reason": "NONE",
-  "heartbeat_seq": 1420
+  "request_reject_reason": "NONE"
 }
 ```
 
@@ -65,7 +64,6 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
 | `tor_remaining_ms` | 整数 (ms) | ○ | TOR残り猶予時間（通常時は `0`） |
 | `stop_reason` | 列挙型（後述） | ○ | 安全停止・非常停止の要因 |
 | `request_reject_reason` | 列挙型（後述） | ○ | モード切替や復帰要求が拒否された理由 |
-| `heartbeat_seq` | 整数 (インクリメント) | ○ | パケット順序監視・生存確認用シーケンス番号 |
 
 #### `stop_reason`（停止要因）の定義
 - `NONE`: 停止なし（正常）
