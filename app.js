@@ -2,7 +2,7 @@
  * MIT License
  * 
  * Copyright (c) 2022 Covao / Koichi Kobayashi (Original DonkeyCopilot)
- * Copyright (c) 2026 (Mini 4WD Copilot Mockup)
+ * Copyright (c) 2026 (Mini 4WD Copilot)
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
