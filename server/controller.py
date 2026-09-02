@@ -45,26 +45,30 @@ class VehicleController:
         """
         self.state["front_distance_mm"] = front_distance_mm
 
-        # AUTO走行中の障害物自動検知 (安全停止)
+        # AUTO走行中の障害物自動検知 (自律中断)
         if self.state["mode"] == MCUMode.AUTO and front_distance_mm < 100:
-            self.trigger_safe_stop(StopReason.OBSTACLE)
+            self.trigger_auto_abort(StopReason.OBSTACLE)
 
-    def trigger_emergency_stop(self, reason: str = StopReason.EMERGENCY_BUTTON):
-        """最優先: 非常停止を発動"""
-        self.state["mode"] = MCUMode.EMERGENCY_STOP
+    def trigger_manual_abort(self, reason: str = StopReason.MANUAL_ABORT_BUTTON):
+        """最優先: 手動中断を発動"""
+        self.state["mode"] = MCUMode.MANUAL_ABORT
         self.state["stop_reason"] = reason
         self.state["tor_active"] = False
         self.state["tor_remaining_ms"] = 0
         self.state["request_reject_reason"] = RejectReason.NONE
         self._apply_motor(0.0, 0.0)
 
-    def trigger_safe_stop(self, reason: str = StopReason.OBSTACLE):
-        """安全停止を発動"""
-        self.state["mode"] = MCUMode.SAFE_STOP
+    def trigger_auto_abort(self, reason: str = StopReason.OBSTACLE):
+        """自律安全中断を発動"""
+        self.state["mode"] = MCUMode.AUTO_ABORT
         self.state["stop_reason"] = reason
         self.state["tor_active"] = False
         self.state["tor_remaining_ms"] = 0
         self._apply_motor(0.0, 0.0)
+
+    # 互換用エイリアス
+    trigger_emergency_stop = trigger_manual_abort
+    trigger_safe_stop = trigger_auto_abort
 
     def trigger_tor(self, duration_ms: int = 4500):
         """TOR (運転引き継ぎ警告) を発動"""
@@ -72,11 +76,11 @@ class VehicleController:
             self.state["tor_active"] = True
             self.state["tor_remaining_ms"] = duration_ms
 
-    def reset_stop(self) -> bool:
+    def reset_abort(self) -> bool:
         """
-        停止状態 (SAFE_STOP / EMERGENCY_STOP) からの復帰要求を処理
+        中断状態 (AUTO_ABORT / MANUAL_ABORT) からの復帰要求を処理
         """
-        if self.state["mode"] not in (MCUMode.SAFE_STOP, MCUMode.EMERGENCY_STOP):
+        if self.state["mode"] not in (MCUMode.AUTO_ABORT, MCUMode.MANUAL_ABORT):
             return False
 
         if self.state["front_distance_mm"] > 200:
@@ -91,19 +95,22 @@ class VehicleController:
             self.state["request_reject_reason"] = RejectReason.OBSTACLE_NEAR
             return False
 
+    # 互換用エイリアス
+    reset_stop = reset_abort
+
     def request_mode(self, target_mode: str) -> bool:
         """
         モード切替要求を処理 (プロトコル安全判定マトリクス準拠)
         """
         current_mode = self.state["mode"]
 
-        # 非常停止中の切替要求は拒否
-        if current_mode == MCUMode.EMERGENCY_STOP:
-            self.state["request_reject_reason"] = RejectReason.IN_EMERGENCY
+        # 手動中断中の切替要求は拒否
+        if current_mode == MCUMode.MANUAL_ABORT:
+            self.state["request_reject_reason"] = RejectReason.IN_MANUAL_ABORT
             return False
 
-        # 安全停止中の切替要求は拒否 (要リセット)
-        if current_mode == MCUMode.SAFE_STOP:
+        # 自動中断中の切替要求は拒否 (要リセット)
+        if current_mode == MCUMode.AUTO_ABORT:
             self.state["request_reject_reason"] = RejectReason.MODE_MISMATCH
             return False
 
@@ -148,14 +155,14 @@ class VehicleController:
         client_mode = cmd.get("client_mode")
         current_mode = self.state["mode"]
 
-        # 1. 最優先: 非常停止
-        if cmd.get("emergency_stop_request"):
-            self.trigger_emergency_stop(StopReason.EMERGENCY_BUTTON)
+        # 1. 最優先: 手動中断 (MANUAL_ABORT / 旧 EMERGENCY_STOP)
+        if cmd.get("manual_abort_request") or cmd.get("emergency_stop_request"):
+            self.trigger_manual_abort(StopReason.MANUAL_ABORT_BUTTON)
             return
 
-        # 2. リセット要求 (停止状態のみ受容)
-        if cmd.get("reset_stop_request"):
-            self.reset_stop()
+        # 2. リセット要求 (中断状態のみ受容)
+        if cmd.get("reset_abort_request") or cmd.get("reset_stop_request"):
+            self.reset_abort()
             return
 
         # 3. モード切替要求
@@ -186,16 +193,16 @@ class VehicleController:
         定期周期更新 (TORカウントダウン、デッドマン監視、通信断監視など)
         :param dt_ms: 前回tickからの経過時間 (ミリ秒)
         """
-        # TOR カウントダウン & 猶予切れ時の自動安全停止
+        # TOR カウントダウン & 猶予切れ時の自動中断
         if self.state["tor_active"] and self.state["tor_remaining_ms"] > 0:
             self.state["tor_remaining_ms"] = max(0, self.state["tor_remaining_ms"] - dt_ms)
             if self.state["tor_remaining_ms"] == 0:
-                self.trigger_safe_stop(StopReason.TOR_TIMEOUT)
+                self.trigger_auto_abort(StopReason.TOR_TIMEOUT)
 
-        # 通信途絶監視 (1.5秒間コマンド未受信で SAFE_STOP)
-        if self.state["mode"] not in (MCUMode.SAFE_STOP, MCUMode.EMERGENCY_STOP):
+        # 通信途絶監視 (1.5秒間コマンド未受信で AUTO_ABORT)
+        if self.state["mode"] not in (MCUMode.AUTO_ABORT, MCUMode.MANUAL_ABORT):
             if time.monotonic() - self.last_command_time > COMM_TIMEOUT_SEC:
-                self.trigger_safe_stop(StopReason.COMM_TIMEOUT)
+                self.trigger_auto_abort(StopReason.COMM_TIMEOUT)
 
         # デッドマンタイマー (MANUAL走行中、コマンド途絶で自動中立)
         if self.state["mode"] == MCUMode.MANUAL:

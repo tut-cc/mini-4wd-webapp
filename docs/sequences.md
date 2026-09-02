@@ -1,6 +1,6 @@
 # 状態遷移・シーケンス図集
 
-本ドキュメントでは、WebApp と 車載マイコン（MCU）間の対話フローを、正常系・異常系・フェイルセーフの各シナリオにおけるシーケンス図として網羅します。
+本ドキュメントでは、WebApp と 車載マイコン間の対話フローを、正常系・異常系・フェイルセーフの各シナリオにおけるシーケンス図として示します。
 
 ## 1. モード切替: MANUAL → AUTO
 
@@ -15,28 +15,28 @@ sequenceDiagram
     Note over W, M: 初期状態: MANUALモードで同期中
 
     U->>W: AUTOボタン押下
-    W->>W: UIを AUTO切替要求中 (Pending) に変更
-    W->>M: client_mode=MANUAL, mode_request=AUTO
+    W->>W: Pendingモードに移行
+    W->>M: client_mode=MANUAL <br> mode_request=AUTO
 
     alt 正常系: 条件を満たしている場合
         M->>M: センサーおよび安全確認完了<br/>mode = AUTO へ遷移
-        M->>W: Heartbeat (mode=AUTO, request_reject_reason=NONE)
+        M->>W: [Heartbeat] <br> mode=AUTO <br> request_reject_reason=NONE
         W->>W: UIを AUTOモード に確定更新
 
     else 異常系 1: 要求拒否 (前方障害物あり / センサー未準備)
         M->>M: 条件未達<br/>mode = MANUAL を維持
-        M->>W: Heartbeat (mode=MANUAL, request_reject_reason=OBSTACLE_NEAR)
-        W->>W: UIを MANUALモード に戻す<br/>エラー通知表示: 前方に障害物があります
+        M->>W: [Heartbeat] <br> mode=MANUAL <br> request_reject_reason=OBSTACLE_NEAR
+        W->>W: エラー通知表示: 前方に障害物があります
 
-    else 異常系 2: 状態不一致による拒否 (マイコンがSAFE_STOP中など)
-        Note over M: マイコンはSAFE_STOP状態
-        M->>M: 不一致かつ安全未確認のため拒否<br/>mode = SAFE_STOP を維持
-        M->>W: Heartbeat (mode=SAFE_STOP, request_reject_reason=MODE_MISMATCH)
-        W->>W: UIを SAFE_STOP に強制同期<br/>エラー通知表示: 停止中のためAUTOに切替できません
+    else 異常系 2: 状態不一致による拒否 (マイコンがAUTO_ABORT中など)
+        Note over M: マイコンはAUTO_ABORT状態
+        M->>M: 不一致かつ安全未確認のため拒否<br/>mode = AUTO_ABORT を維持
+        M->>W: [Heartbeat] <br> mode=AUTO_ABORT <br> request_reject_reason=MODE_MISMATCH
+        W->>W: UIを AUTO_ABORT に強制同期<br/>エラー通知表示: 中断中のためAUTOに切替できません
 
     else 異常系 3: タイムアウト (パケットロス / 無応答)
         Note over W: 要求送信後 1000ms 経過しても<br/>mode=AUTO のHeartbeatを受信しない
-        W->>W: UIを MANUALモード に戻す<br/>エラー通知表示: モード切替がタイムアウトしました
+        W->>W: MANUALモード に戻す<br/>エラー通知表示: モード切替がタイムアウトしました
     end
 ```
 
@@ -99,12 +99,12 @@ sequenceDiagram
         W->>M: client_mode=MANUAL, throttle=0.0, steering=0.0
         M->>M: モーター停止
 
-    else 異常系 1: 状態不一致時の走行指示 (マイコンがSAFE_STOP中の場合)
-        Note over M: マイコンは障害物検知でSAFE_STOP中
+    else 異常系 1: 状態不一致時の走行指示 (マイコンがAUTO_ABORT中の場合)
+        Note over M: マイコンは障害物検知でAUTO_ABORT中
         W->>M: client_mode=MANUAL, throttle=1.0, steering=0.0
         M->>M: 状態不一致かつ危険操作のためスロットル破棄<br/>モーターは停止状態を維持
-        M->>W: Heartbeat (mode=SAFE_STOP, stop_reason=OBSTACLE)
-        W->>W: UIを SAFE_STOP 画面へ強制同期
+        M->>W: Heartbeat (mode=AUTO_ABORT, stop_reason=OBSTACLE)
+        W->>W: UIを AUTO_ABORT 画面へ強制同期
 
     else 異常系 2: 停止信号パケットロス または 通信途絶
         U->>W: 指を離すが停止信号が欠落
@@ -139,9 +139,9 @@ sequenceDiagram
 
     else 分岐 B: ユーザー無応答によるタイムアウト
         Note over M: tor_remaining_ms が 0 に到達
-        M->>M: 減速および安全停止処理を実行<br/>mode = SAFE_STOP, stop_reason = TOR_TIMEOUT
-        M->>W: Heartbeat (mode=SAFE_STOP, tor_active=false, stop_reason=TOR_TIMEOUT)
-        W->>W: TOR画面解除、SAFE_STOP 画面へ遷移
+        M->>M: 減速および安全停止処理を実行<br/>mode = AUTO_ABORT, stop_reason = TOR_TIMEOUT
+        M->>W: Heartbeat (mode=AUTO_ABORT, tor_active=false, stop_reason=TOR_TIMEOUT)
+        W->>W: TOR画面解除、AUTO_ABORT 画面へ遷移
 
     else 分岐 C: 危険要因の自律解消
         Note over M: 一時的な障害物が通過し自律走行可能に回復
@@ -149,16 +149,16 @@ sequenceDiagram
         M->>W: Heartbeat (mode=AUTO, tor_active=false)
         W->>W: TOR画面を自動解除、通常のAUTO画面に戻る
 
-    else 分岐 D: TOR中にEMERGENCY_STOP
-        U->>W: EMERGENCY_STOP ボタン押下
-        W->>M: client_mode=AUTO, emergency_stop_request=true
-        M->>M: 即座に出力遮断<br/>mode = EMERGENCY_STOP, stop_reason = EMERGENCY_BUTTON
-        M->>W: Heartbeat (mode=EMERGENCY_STOP, stop_reason=EMERGENCY_BUTTON)
-        W->>W: EMERGENCY_STOP 画面へ遷移
+    else 分岐 D: TOR中にMANUAL_ABORT (手動中断)
+        U->>W: ABORT ボタン押下
+        W->>M: client_mode=AUTO, manual_abort_request=true
+        M->>M: 即座に出力遮断<br/>mode = MANUAL_ABORT, stop_reason = MANUAL_ABORT_BUTTON
+        M->>W: Heartbeat (mode=MANUAL_ABORT, stop_reason=MANUAL_ABORT_BUTTON)
+        W->>W: MANUAL_ABORT 画面へ遷移
     end
 ```
 
-## 5. EMERGENCY_STOP の発報と復帰手順
+## 5. MANUAL_ABORT (手動中断) の発報と復帰手順
 
 ```mermaid
 sequenceDiagram
@@ -168,17 +168,17 @@ sequenceDiagram
 
     Note over W, M: 任意の状態 (認識モード不問)
 
-    U->>W: EMERGENCY_STOP ボタン押下
-    W->>M: client_mode=任意, emergency_stop_request=true
-    M->>M: 最優先で即座にモーター遮断<br/>mode = EMERGENCY_STOP<br/>stop_reason = EMERGENCY_BUTTON
+    U->>W: ABORT ボタン押下
+    W->>M: client_mode=任意, manual_abort_request=true
+    M->>M: 最優先で即座にモーター遮断<br/>mode = MANUAL_ABORT<br/>stop_reason = MANUAL_ABORT_BUTTON
 
-    M->>W: Heartbeat (mode=EMERGENCY_STOP, stop_reason=EMERGENCY_BUTTON)
-    W->>W: 全操作ロック、EMERGENCY_STOP 画面表示
+    M->>W: Heartbeat (mode=MANUAL_ABORT, stop_reason=MANUAL_ABORT_BUTTON)
+    W->>W: 全操作ロック、MANUAL_ABORT 画面表示
 
     Note over U, W: 安全確認および復帰操作
 
-    U->>W: 「安全確認・リセット」ボタン押下
-    W->>M: client_mode=EMERGENCY_STOP, reset_stop_request=true
+    U->>W: 「RESET」ボタン押下
+    W->>M: client_mode=MANUAL_ABORT, reset_abort_request=true
 
     alt 復帰成功: マイコンが安全を確認
         M->>M: センサーおよびハードウェアの安全確認完了<br/>mode = MANUAL, stop_reason = NONE
@@ -186,13 +186,13 @@ sequenceDiagram
         W->>W: ロック解除、MANUAL操作画面に復帰
 
     else 復帰拒否: 危険が継続中
-        M->>M: 安全未確認のため EMERGENCY_STOP を維持
-        M->>W: Heartbeat (mode=EMERGENCY_STOP, request_reject_reason=OBSTACLE_NEAR)
+        M->>M: 安全未確認のため MANUAL_ABORT を維持
+        M->>W: Heartbeat (mode=MANUAL_ABORT, request_reject_reason=OBSTACLE_NEAR)
         W->>W: エラー表示: 障害物を取り除いてください
     end
 ```
 
-## 6. SAFE_STOP からの復帰シーケンス
+## 6. AUTO_ABORT (自動中断) からの復帰シーケンス
 
 ```mermaid
 sequenceDiagram
@@ -200,10 +200,10 @@ sequenceDiagram
     participant W as WebApp
     participant M as マイコン
 
-    Note over W, M: 状態: SAFE_STOP
+    Note over W, M: 状態: AUTO_ABORT
 
-    U->>W: 「手動モードで再開」ボタン押下
-    W->>M: client_mode=SAFE_STOP, reset_stop_request=true
+    U->>W: 「RESET」ボタン押下
+    W->>M: client_mode=AUTO_ABORT, reset_abort_request=true
 
     alt 復帰成功
         M->>M: 停止要因クリアを確認<br/>mode = MANUAL, stop_reason = NONE
@@ -211,8 +211,8 @@ sequenceDiagram
         W->>W: MANUAL操作画面へ移行
 
     else 復帰拒否: 停止要因が未解消
-        M->>M: 停止要因が残っているため SAFE_STOP 維持
-        M->>W: Heartbeat (mode=SAFE_STOP, request_reject_reason=OBSTACLE_NEAR)
+        M->>M: 停止要因が残っているため AUTO_ABORT 維持
+        M->>W: Heartbeat (mode=AUTO_ABORT, request_reject_reason=OBSTACLE_NEAR)
         W->>W: エラー表示: 障害物を検知しています
     end
 ```
@@ -233,17 +233,11 @@ sequenceDiagram
         W->>W: CONNECTED から DISCONNECTED へ遷移<br/>操作UIを無効化、切断アラート表示
     and マイコン側のフェイルセーフ処理
         Note over M: WebAppからのパケット受信途絶
-        M->>M: モーター停止<br/>mode = SAFE_STOP, stop_reason = COMM_TIMEOUT
+        M->>M: モーター停止<br/>mode = AUTO_ABORT, stop_reason = COMM_TIMEOUT
     end
 
     Note over W, M: 【通信回復・再接続】
 
-    M->>W: Heartbeat (mode=SAFE_STOP, stop_reason=COMM_TIMEOUT)
-    W->>W: DISCONNECTED から CONNECTED へ復帰<br/>マイコンの最新状態 SAFE_STOP を同期反映<br/>通知表示: 通信切断により安全停止しました
+    M->>W: Heartbeat (mode=AUTO_ABORT, stop_reason=COMM_TIMEOUT)
+    W->>W: DISCONNECTED から CONNECTED へ復帰<br/>マイコンの最新状態 AUTO_ABORT を同期反映<br/>通知表示: 通信切断により自律中断しました
 ```
-
-## 8. 関連ドキュメント
-
-- [システム全体構成・アーキテクチャ設計書](file:///home/rsny/mini-4wd-webapp/docs/system-architecture.md)
-- [WebApp UI仕様・画面遷移設計書](file:///home/rsny/mini-4wd-webapp/docs/ui-spec.md)
-- [通信プロトコル仕様書](file:///home/rsny/mini-4wd-webapp/docs/protocol.md)

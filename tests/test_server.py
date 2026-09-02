@@ -22,24 +22,24 @@ class TestVehicleController(unittest.TestCase):
         self.assertEqual(telemetry["stop_reason"], StopReason.NONE)
         self.assertEqual(telemetry["front_distance_mm"], 1200)
 
-    def test_emergency_stop(self):
-        self.controller.process_command({"emergency_stop_request": True})
-        self.assertEqual(self.controller.state["mode"], MCUMode.EMERGENCY_STOP)
-        self.assertEqual(self.controller.state["stop_reason"], StopReason.EMERGENCY_BUTTON)
+    def test_manual_abort(self):
+        self.controller.process_command({"manual_abort_request": True})
+        self.assertEqual(self.controller.state["mode"], MCUMode.MANUAL_ABORT)
+        self.assertEqual(self.controller.state["stop_reason"], StopReason.MANUAL_ABORT_BUTTON)
         self.assertEqual(self.controller.throttle, 0.0)
         self.assertEqual(self.controller.steering, 0.0)
 
-    def test_reset_stop(self):
-        self.controller.trigger_emergency_stop()
+    def test_reset_abort(self):
+        self.controller.trigger_manual_abort()
         # 障害物が近い場合 (<=200mm) はリセット拒否
         self.controller.update_sensor(150)
-        self.controller.process_command({"reset_stop_request": True})
-        self.assertEqual(self.controller.state["mode"], MCUMode.EMERGENCY_STOP)
+        self.controller.process_command({"reset_abort_request": True})
+        self.assertEqual(self.controller.state["mode"], MCUMode.MANUAL_ABORT)
         self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.OBSTACLE_NEAR)
 
         # 障害物が離れている場合 (>200mm) はリセット成功
         self.controller.update_sensor(500)
-        self.controller.process_command({"reset_stop_request": True})
+        self.controller.process_command({"reset_abort_request": True})
         self.assertEqual(self.controller.state["mode"], MCUMode.MANUAL)
         self.assertEqual(self.controller.state["stop_reason"], StopReason.NONE)
 
@@ -53,7 +53,7 @@ class TestVehicleController(unittest.TestCase):
         self.controller.process_command({"mode_request": "MANUAL"})
         self.assertEqual(self.controller.state["mode"], MCUMode.MANUAL)
 
-    def test_tor_timeout_to_safe_stop(self):
+    def test_tor_timeout_to_auto_abort(self):
         self.controller.state["mode"] = MCUMode.AUTO
         self.controller.trigger_tor(duration_ms=200)
         self.assertTrue(self.controller.state["tor_active"])
@@ -63,10 +63,10 @@ class TestVehicleController(unittest.TestCase):
         self.assertEqual(self.controller.state["tor_remaining_ms"], 100)
         self.assertEqual(self.controller.state["mode"], MCUMode.AUTO)
 
-        # さらに100ms経過 -> 0ms到達で SAFE_STOP に遷移
+        # さらに100ms経過 -> 0ms到達で AUTO_ABORT に遷移
         self.controller.tick(100)
         self.assertEqual(self.controller.state["tor_remaining_ms"], 0)
-        self.assertEqual(self.controller.state["mode"], MCUMode.SAFE_STOP)
+        self.assertEqual(self.controller.state["mode"], MCUMode.AUTO_ABORT)
         self.assertEqual(self.controller.state["stop_reason"], StopReason.TOR_TIMEOUT)
 
     def test_manual_throttle_steering(self):
@@ -75,38 +75,38 @@ class TestVehicleController(unittest.TestCase):
         self.assertAlmostEqual(th, 0.75)
         self.assertAlmostEqual(st, -0.5)
 
-    def test_comm_timeout_to_safe_stop(self):
-        # コマンド送信後、1.5秒以上経過すると COMM_TIMEOUT で SAFE_STOP に遷移
+    def test_comm_timeout_to_auto_abort(self):
+        # コマンド送信後、1.5秒以上経過すると COMM_TIMEOUT で AUTO_ABORT に遷移
         self.controller.last_command_time = time.monotonic() - 1.6
         self.controller.tick(100)
-        self.assertEqual(self.controller.state["mode"], MCUMode.SAFE_STOP)
+        self.assertEqual(self.controller.state["mode"], MCUMode.AUTO_ABORT)
         self.assertEqual(self.controller.state["stop_reason"], StopReason.COMM_TIMEOUT)
 
-    def test_stop_rejects_manual_switch(self):
-        # EMERGENCY_STOP 中は mode_request: MANUAL を拒否 (IN_EMERGENCY)
-        self.controller.trigger_emergency_stop()
+    def test_abort_rejects_manual_switch(self):
+        # MANUAL_ABORT 中は mode_request: MANUAL を拒否 (IN_MANUAL_ABORT)
+        self.controller.trigger_manual_abort()
         self.controller.process_command({"mode_request": "MANUAL"})
-        self.assertEqual(self.controller.state["mode"], MCUMode.EMERGENCY_STOP)
-        self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.IN_EMERGENCY)
+        self.assertEqual(self.controller.state["mode"], MCUMode.MANUAL_ABORT)
+        self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.IN_MANUAL_ABORT)
 
-        # SAFE_STOP 中も mode_request: MANUAL を拒否 (MODE_MISMATCH)
-        self.controller.trigger_safe_stop()
+        # AUTO_ABORT 中も mode_request: MANUAL を拒否 (MODE_MISMATCH)
+        self.controller.trigger_auto_abort()
         self.controller.process_command({"mode_request": "MANUAL"})
-        self.assertEqual(self.controller.state["mode"], MCUMode.SAFE_STOP)
+        self.assertEqual(self.controller.state["mode"], MCUMode.AUTO_ABORT)
         self.assertEqual(self.controller.state["request_reject_reason"], RejectReason.MODE_MISMATCH)
 
     def test_running_reset_ignored(self):
-        # AUTO走行中は reset_stop_request が無視される
+        # AUTO走行中は reset_abort_request が無視される
         self.controller.update_sensor(500)
         self.controller.process_command({"mode_request": "AUTO"})
         self.assertEqual(self.controller.state["mode"], MCUMode.AUTO)
 
-        self.controller.process_command({"reset_stop_request": True})
+        self.controller.process_command({"reset_abort_request": True})
         self.assertEqual(self.controller.state["mode"], MCUMode.AUTO)
 
     def test_client_mode_mismatch_discard_throttle(self):
-        # クライアントが SAFE_STOP 認識のままスロットルを送信した場合、破棄される
-        self.controller.process_command({"client_mode": "SAFE_STOP", "throttle": 0.8, "steering": 0.5})
+        # クライアントが AUTO_ABORT 認識のままスロットルを送信した場合、破棄される
+        self.controller.process_command({"client_mode": "AUTO_ABORT", "throttle": 0.8, "steering": 0.5})
         th, st = self.controller.get_motor_output()
         self.assertEqual(th, 0.0)
         self.assertEqual(st, 0.0)

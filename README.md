@@ -10,7 +10,7 @@
 python3 mock_server.py
 ```
 - ポート `8765` で Webサーバー＆WebSocketサーバーが起動します。
-- ターミナル上で `1` 〜 `5` のキーを押すことで、動作シナリオ（手動走行、自動運転、TOR警告、障害物検知、非常停止）をリアルタイムに切り替えられます。
+- ターミナル上で `1` 〜 `5` のキーを押すことで、動作シナリオ（手動走行、自動運転、TOR警告、自動中断、手動中断）をリアルタイムに切り替えられます。
 
 ### 2. ブラウザ（スマホまたはPC）でアクセス
 スマホやPCのブラウザで以下のURLを開きます：
@@ -43,10 +43,3 @@ mini-4wd-webapp/
 
 - **実機マイコン向けに開発する場合:**
   - `server/` パッケージをそのまま利用し、[`examples/real_server_template.py`](examples/real_server_template.py) のように実機のPWMドライバ（モーター/サーボ）やカメラモジュールをバインドするだけで実機サーバーを構築できます。
-
-## 仕様・設計ドキュメント
-詳細な仕様書は [`docs/`](docs/README.md) にあります。
-- [システムアーキテクチャ](docs/system-architecture.md)
-- [UI仕様・画面設計](docs/ui-spec.md)
-- [通信プロトコル仕様](docs/protocol.md)
-- [状態遷移・シーケンス図](docs/sequences.md)

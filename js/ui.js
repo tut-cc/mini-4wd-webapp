@@ -45,10 +45,10 @@ export class UIManager {
 
     renderState(uiState, mcuData) {
         const isDis = uiState === UIState.DISCONNECTED;
-        const isStopped = uiState === UIState.SAFE_STOP || uiState === UIState.EMERGENCY_STOP;
-        const isTor = uiState === UIState.AUTO_TOR;
-        const isPending = uiState === UIState.AUTO_PENDING || uiState === UIState.MANUAL_PENDING;
-        const isAuto = uiState === UIState.AUTO || uiState === UIState.AUTO_PENDING;
+        const isAborted = uiState === UIState.AUTO_ABORT || uiState === UIState.MANUAL_ABORT || uiState === 'SAFE_STOP' || uiState === 'EMERGENCY_STOP';
+        const isTor = uiState === UIState.AUTO_TOR || uiState === UIState.TOR_MANUAL_PENDING;
+        const isPending = uiState === UIState.AUTO_PENDING || uiState === UIState.AUTO_MANUAL_PENDING || uiState === UIState.TOR_MANUAL_PENDING;
+        const isAuto = uiState === UIState.AUTO || uiState === UIState.AUTO_PENDING || uiState === UIState.AUTO_MANUAL_PENDING;
 
         if (this.el.statusText) this.el.statusText.textContent = isDis ? '未接続' : '接続中';
         if (this.el.statusBadge) this.el.statusBadge.classList.toggle('disconnected', isDis);
@@ -60,11 +60,11 @@ export class UIManager {
         }
 
         if (this.el.distance) this.el.distance.textContent = mcuData?.front_distance_mm ?? '--';
-        this.el.stopReason?.classList.toggle('hidden', !isStopped);
-        if (isStopped && this.el.stopReasonText) {
+        this.el.stopReason?.classList.toggle('hidden', !isAborted);
+        if (isAborted && this.el.stopReasonText) {
             let r = mcuData?.stop_reason;
             if (!r || r === 'NONE') {
-                r = uiState === UIState.EMERGENCY_STOP ? 'EMERGENCY_BUTTON' : 'OBSTACLE';
+                r = (uiState === UIState.MANUAL_ABORT || uiState === 'EMERGENCY_STOP') ? 'MANUAL_ABORT_BUTTON' : 'OBSTACLE';
             }
             this.el.stopReasonText.textContent = StopReasonText[r] || r;
         }
@@ -73,12 +73,12 @@ export class UIManager {
             this.el.btnMode.textContent = isAuto ? 'AUTO MODE' : 'MANUAL MODE';
             this.el.btnMode.classList.toggle('auto-mode', isAuto);
             this.el.btnMode.classList.toggle('pending', isPending);
-            this.el.btnMode.disabled = isDis || isPending || isStopped || isTor;
+            this.el.btnMode.disabled = isDis || isPending || isAborted || isTor;
         }
 
         if (this.el.btnStop) {
-            this.el.btnStop.textContent = isStopped ? 'RESET' : 'STOP';
-            this.el.btnStop.classList.toggle('reset-mode', isStopped);
+            this.el.btnStop.textContent = isAborted ? 'RESET' : 'ABORT';
+            this.el.btnStop.classList.toggle('reset-mode', isAborted);
             this.el.btnStop.disabled = isDis;
         }
     }

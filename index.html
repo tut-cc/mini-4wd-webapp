@@ -34,12 +34,12 @@
   <!-- アラート通知 -->
   <div id="alert-banner" class="hidden">エラー通知</div>
 
-  <!-- 操作フッター (停止理由 / モード切替 / STOP) -->
+  <!-- 操作フッター (中断理由 / モード切替 / ABORT) -->
   <footer class="bottom-bar">
-    <div id="stop-reason" class="hidden">停止理由: <span id="stop-reason-text">NONE</span></div>
+    <div id="stop-reason" class="hidden">中断理由: <span id="stop-reason-text">NONE</span></div>
     <div class="action-row">
       <button id="btn-mode" class="action-btn">MANUAL MODE</button>
-      <button id="btn-stop" class="action-btn btn-stop">STOP</button>
+      <button id="btn-stop" class="action-btn btn-stop">ABORT</button>
     </div>
   </footer>
 
@@ -71,7 +71,7 @@
       <ul>
         <li><strong>走行操作:</strong> 画面をタッチ＆スワイプ（上下で前後、左右でステアリング）</li>
         <li><strong>自動運転:</strong> AUTO MODE ボタンで切替要求</li>
-        <li><strong>緊急停止:</strong> STOP ボタンで即時停止（停止後は RESET で復旧）</li>
+        <li><strong>手動中断:</strong> ABORT ボタンで即時中断（中断後は RESET で復旧）</li>
       </ul>
     </div>
   </div>

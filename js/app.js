@@ -12,7 +12,7 @@ export class Mini4WDApp {
 
         this.ui = new UIManager({
             onDriveModeClick: () => this.stateMachine.requestDriveModeToggle(),
-            onStopClick: () => this.stateMachine.requestStopAction(),
+            onStopClick: () => this.stateMachine.requestAbortAction(),
             onTorTakeoverClick: () => this.stateMachine.requestTorTakeover()
         });
 

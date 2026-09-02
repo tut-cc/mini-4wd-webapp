@@ -5,18 +5,19 @@ export const UIState = {
     DISCONNECTED: 'DISCONNECTED',
     MANUAL: 'MANUAL',
     AUTO_PENDING: 'AUTO_PENDING',
-    MANUAL_PENDING: 'MANUAL_PENDING',
+    AUTO_MANUAL_PENDING: 'AUTO_MANUAL_PENDING',
+    TOR_MANUAL_PENDING: 'TOR_MANUAL_PENDING',
     AUTO: 'AUTO',
     AUTO_TOR: 'AUTO_TOR',
-    SAFE_STOP: 'SAFE_STOP',
-    EMERGENCY_STOP: 'EMERGENCY_STOP'
+    AUTO_ABORT: 'AUTO_ABORT',
+    MANUAL_ABORT: 'MANUAL_ABORT'
 };
 
 export const MCUMode = {
     MANUAL: 'MANUAL',
     AUTO: 'AUTO',
-    SAFE_STOP: 'SAFE_STOP',
-    EMERGENCY_STOP: 'EMERGENCY_STOP'
+    AUTO_ABORT: 'AUTO_ABORT',
+    MANUAL_ABORT: 'MANUAL_ABORT'
 };
 
 export const ModeRequest = { NONE: 'NONE', MANUAL: 'MANUAL', AUTO: 'AUTO' };
@@ -24,7 +25,8 @@ export const ModeRequest = { NONE: 'NONE', MANUAL: 'MANUAL', AUTO: 'AUTO' };
 export const StopReasonText = {
     OBSTACLE: '障害物検知',
     TOR_TIMEOUT: '引継ぎ時間切れ',
-    EMERGENCY_BUTTON: '非常停止',
+    MANUAL_ABORT_BUTTON: '手動中断',
+    EMERGENCY_BUTTON: '手動中断',
     COMM_TIMEOUT: '通信切断',
     SENSOR_ERROR: 'センサー異常'
 };
@@ -33,8 +35,9 @@ export const RejectReasonText = {
     OBSTACLE_NEAR: '前方に障害物があります',
     SENSOR_NOT_READY: 'センサーが準備できていません',
     IN_TOR: '運転引継ぎ警告中です',
-    IN_EMERGENCY: '非常停止中のため操作できません',
-    MODE_MISMATCH: '停止中のため切替できません'
+    IN_MANUAL_ABORT: '手動中断中のため操作できません',
+    IN_EMERGENCY: '手動中断中のため操作できません',
+    MODE_MISMATCH: '中断中のため切替できません'
 };
 
 export const Config = {

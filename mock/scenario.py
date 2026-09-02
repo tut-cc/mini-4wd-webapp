@@ -33,7 +33,7 @@ DEFAULT_SCENARIOS = {
         "request_reject_reason": "NONE"
     },
     "obstacle_stop": {
-        "mode": "SAFE_STOP",
+        "mode": "AUTO_ABORT",
         "front_distance_mm": 80,
         "tor_active": False,
         "tor_remaining_ms": 0,
@@ -41,11 +41,11 @@ DEFAULT_SCENARIOS = {
         "request_reject_reason": "NONE"
     },
     "emergency_stop": {
-        "mode": "EMERGENCY_STOP",
+        "mode": "MANUAL_ABORT",
         "front_distance_mm": 1200,
         "tor_active": False,
         "tor_remaining_ms": 0,
-        "stop_reason": "EMERGENCY_BUTTON",
+        "stop_reason": "MANUAL_ABORT_BUTTON",
         "request_reject_reason": "NONE"
     }
 }
@@ -87,7 +87,7 @@ class ScenarioManager:
 
     async def terminal_input_loop(self):
         loop = asyncio.get_running_loop()
-        print(f"\n[Terminal Keys] [1]Manual [2]Auto [3]TOR [4]Obstacle [5]Stop [r]Reload Scenarios\n")
+        print(f"\n[Terminal Keys] [1]Manual [2]Auto [3]TOR [4]AutoAbort [5]ManualAbort [r]Reload Scenarios\n")
         while True:
             line = await loop.run_in_executor(None, sys.stdin.readline)
             if not line:

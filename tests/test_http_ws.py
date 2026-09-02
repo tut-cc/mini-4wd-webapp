@@ -58,8 +58,8 @@ class TestHttpWsServer(unittest.IsolatedAsyncioTestCase):
             self.assertIn(b"101 Switching Protocols", resp)
             self.assertIn(b"Sec-WebSocket-Accept:", resp)
 
-            # WebSocketで非常停止コマンドを送信
-            cmd_json = '{"emergency_stop_request": true}'
+            # WebSocketで手動中断コマンドを送信
+            cmd_json = '{"manual_abort_request": true}'
             ws_frame = server.create_ws_frame(cmd_json)
             # クライアントフレームなのでマスクを適用
             masked_frame = bytearray([0x81, 0x80 | len(cmd_json.encode('utf-8')), 0x00, 0x00, 0x00, 0x00]) + cmd_json.encode('utf-8')
@@ -67,7 +67,7 @@ class TestHttpWsServer(unittest.IsolatedAsyncioTestCase):
             await writer.drain()
 
             await asyncio.sleep(0.05)
-            self.assertEqual(controller.state["mode"], "EMERGENCY_STOP")
+            self.assertEqual(controller.state["mode"], "MANUAL_ABORT")
 
             writer.close()
             await writer.wait_closed()

@@ -7,10 +7,11 @@ const CLIENT_MODE = {
     [UIState.MANUAL]: 'MANUAL',
     [UIState.AUTO_PENDING]: 'MANUAL',
     [UIState.AUTO]: 'AUTO',
-    [UIState.MANUAL_PENDING]: 'AUTO',
+    [UIState.AUTO_MANUAL_PENDING]: 'AUTO',
+    [UIState.TOR_MANUAL_PENDING]: 'AUTO',
     [UIState.AUTO_TOR]: 'AUTO',
-    [UIState.SAFE_STOP]: 'SAFE_STOP',
-    [UIState.EMERGENCY_STOP]: 'EMERGENCY_STOP'
+    [UIState.AUTO_ABORT]: 'AUTO_ABORT',
+    [UIState.MANUAL_ABORT]: 'MANUAL_ABORT'
 };
 
 export class StateMachine {
@@ -20,8 +21,8 @@ export class StateMachine {
         this.pendingTimer = null;
         this.mcuData = { mode: MCUMode.MANUAL, front_distance_mm: 1200 };
         this.pendingModeRequest = ModeRequest.NONE;
-        this.pendingEmergencyStop = false;
-        this.pendingResetStop = false;
+        this.pendingManualAbort = false;
+        this.pendingResetAbort = false;
     }
 
     getTransmitPayload() {
@@ -31,12 +32,14 @@ export class StateMachine {
             throttle: isManual ? this.app.input.getThrottle() : 0,
             steering: isManual ? this.app.input.getSteering() : 0,
             mode_request: this.pendingModeRequest,
-            emergency_stop_request: this.pendingEmergencyStop,
-            reset_stop_request: this.pendingResetStop
+            manual_abort_request: this.pendingManualAbort,
+            emergency_stop_request: this.pendingManualAbort, // 後方互換性
+            reset_abort_request: this.pendingResetAbort,
+            reset_stop_request: this.pendingResetAbort      // 後方互換性
         };
         this.pendingModeRequest = ModeRequest.NONE;
-        this.pendingEmergencyStop = false;
-        this.pendingResetStop = false;
+        this.pendingManualAbort = false;
+        this.pendingResetAbort = false;
         return payload;
     }
 
@@ -60,7 +63,7 @@ export class StateMachine {
             return;
         }
 
-        if (this.state === UIState.MANUAL_PENDING) {
+        if (this.state === UIState.AUTO_MANUAL_PENDING || this.state === UIState.TOR_MANUAL_PENDING) {
             if (data.mode === MCUMode.MANUAL) {
                 this.clearTimer();
                 return this.transitionTo(UIState.MANUAL);
@@ -77,8 +80,8 @@ export class StateMachine {
 
     syncToMCU() {
         const { mode, tor_active } = this.mcuData;
-        if (mode === MCUMode.EMERGENCY_STOP) return this.transitionTo(UIState.EMERGENCY_STOP);
-        if (mode === MCUMode.SAFE_STOP) return this.transitionTo(UIState.SAFE_STOP);
+        if (mode === MCUMode.MANUAL_ABORT || mode === 'EMERGENCY_STOP') return this.transitionTo(UIState.MANUAL_ABORT);
+        if (mode === MCUMode.AUTO_ABORT || mode === 'SAFE_STOP') return this.transitionTo(UIState.AUTO_ABORT);
         if (mode === MCUMode.AUTO) return this.transitionTo(tor_active ? UIState.AUTO_TOR : UIState.AUTO);
         this.transitionTo(UIState.MANUAL);
     }
@@ -96,19 +99,20 @@ export class StateMachine {
         }
     }
 
-    startManualSwitch() {
+    startManualSwitch(fromTor = false) {
         this.pendingModeRequest = ModeRequest.MANUAL;
-        this.transitionTo(UIState.MANUAL_PENDING);
-        this.scheduleManualResend();
+        const targetState = fromTor ? UIState.TOR_MANUAL_PENDING : UIState.AUTO_MANUAL_PENDING;
+        this.transitionTo(targetState);
+        this.scheduleManualResend(targetState);
     }
 
-    scheduleManualResend() {
+    scheduleManualResend(targetState) {
         this.clearTimer();
         this.pendingTimer = setTimeout(() => {
-            if (this.state === UIState.MANUAL_PENDING) {
+            if (this.state === targetState) {
                 this.app.ui.showError('切替応答待ち (手動復帰を再送中...)');
                 this.pendingModeRequest = ModeRequest.MANUAL;
-                this.scheduleManualResend();
+                this.scheduleManualResend(targetState);
             }
         }, Config.MODE_SWITCH_TIMEOUT_MS);
     }
@@ -123,27 +127,35 @@ export class StateMachine {
                     this.transitionTo(UIState.MANUAL);
                 }
             }, Config.MODE_SWITCH_TIMEOUT_MS);
-        } else if (this.state === UIState.AUTO || this.state === UIState.AUTO_TOR) {
-            this.startManualSwitch();
+        } else if (this.state === UIState.AUTO) {
+            this.startManualSwitch(false);
+        } else if (this.state === UIState.AUTO_TOR) {
+            this.startManualSwitch(true);
         }
     }
 
-    requestStopAction() {
-        if (this.state === UIState.SAFE_STOP || this.state === UIState.EMERGENCY_STOP) {
-            this.requestResetStop();
+    requestAbortAction() {
+        if (this.state === UIState.AUTO_ABORT || this.state === UIState.MANUAL_ABORT) {
+            this.requestResetAbort();
         } else {
-            this.requestEmergencyStop();
+            this.requestManualAbort();
         }
     }
 
-    requestEmergencyStop() {
-        this.pendingEmergencyStop = true;
+    requestManualAbort() {
+        this.pendingManualAbort = true;
         this.clearTimer();
-        // マイコンからの Heartbeat (mode=EMERGENCY_STOP) 受信で確定遷移
+        // マイコンからの Heartbeat (mode=MANUAL_ABORT) 受信で確定遷移
     }
 
-    requestResetStop() { this.pendingResetStop = true; }
-    requestTorTakeover() { this.startManualSwitch(); }
+    requestResetAbort() { this.pendingResetAbort = true; }
+
+    // 互換用エイリアス
+    requestStopAction() { return this.requestAbortAction(); }
+    requestEmergencyStop() { return this.requestManualAbort(); }
+    requestResetStop() { return this.requestResetAbort(); }
+
+    requestTorTakeover() { this.startManualSwitch(true); }
     handleDisconnect() { this.clearTimer(); this.transitionTo(UIState.DISCONNECTED); }
     handleConnect() { this.syncToMCU(); }
 }
