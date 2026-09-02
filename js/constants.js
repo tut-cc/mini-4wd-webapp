@@ -1,25 +1,9 @@
-/**
- * ミニ四駆自動運転 WebApp - 定数 & 設定
- */
-export const UIState = {
-    DISCONNECTED: 'DISCONNECTED',
-    MANUAL: 'MANUAL',
-    AUTO_PENDING: 'AUTO_PENDING',
-    AUTO_MANUAL_PENDING: 'AUTO_MANUAL_PENDING',
-    TOR_MANUAL_PENDING: 'TOR_MANUAL_PENDING',
-    AUTO: 'AUTO',
-    AUTO_TOR: 'AUTO_TOR',
-    AUTO_ABORT: 'AUTO_ABORT',
-    MANUAL_ABORT: 'MANUAL_ABORT'
-};
+export const UIState = Object.fromEntries([
+    'DISCONNECTED', 'MANUAL', 'AUTO_PENDING', 'AUTO_MANUAL_PENDING',
+    'TOR_MANUAL_PENDING', 'AUTO', 'AUTO_TOR', 'AUTO_ABORT', 'MANUAL_ABORT'
+].map(k => [k, k]));
 
-export const MCUMode = {
-    MANUAL: 'MANUAL',
-    AUTO: 'AUTO',
-    AUTO_ABORT: 'AUTO_ABORT',
-    MANUAL_ABORT: 'MANUAL_ABORT'
-};
-
+export const MCUMode = Object.fromEntries(['MANUAL', 'AUTO', 'AUTO_ABORT', 'MANUAL_ABORT'].map(k => [k, k]));
 export const ModeRequest = { NONE: 'NONE', MANUAL: 'MANUAL', AUTO: 'AUTO' };
 
 export const StopReasonText = {
