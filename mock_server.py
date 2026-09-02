@@ -5,7 +5,6 @@ Mini 4WD WebApp - Mock Server
 """
 import asyncio
 import os
-import sys
 
 from server.controller import VehicleController
 from server.http_ws_server import HttpWsServer

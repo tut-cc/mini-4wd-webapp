@@ -8,14 +8,11 @@ Raspberry Pi などの車載SBC/マイコンで WebApp サーバーを動作さ�
 """
 import asyncio
 import os
-import sys
 
 from server import (
     VehicleController,
     HttpWsServer,
     BaseCameraProvider,
-    MCUMode,
-    StopReason,
 )
 
 # ----------------------------------------------------
