@@ -126,7 +126,7 @@ sequenceDiagram
     Note over W, M: 初期状態: AUTOモードで走行中
 
     M->>M: 走行困難または危険接近を検知<br/>tor_active = true, 残り時間カウント開始
-    M->>W: Heartbeat (mode=AUTO, tor_active=true, tor_remaining_ms=5000)
+    M->>W: Heartbeat (mode=AUTO, tor_active=true, tor_remaining_ms=3000)
 
     W->>W: AUTO_TOR 画面へ遷移<br/>警告アラート表示、手動切替ボタン強調
 

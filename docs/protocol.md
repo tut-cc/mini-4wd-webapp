@@ -43,7 +43,7 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
   "mode": "AUTO",
   "front_distance_mm": 450,
   "tor_active": true,
-  "tor_remaining_ms": 3500,
+  "tor_remaining_ms": 3000,
   "stop_reason": "NONE",
   "request_reject_reason": "NONE"
 }
@@ -85,7 +85,7 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
 TOR発生時 (AUTO_TOR):
   mode = "AUTO"
   tor_active = true
-  tor_remaining_ms = 3500
+  tor_remaining_ms = 3000
 ```
 
 WebAppは `tor_active: true` を受信した際に、UI内部で `AUTO_TOR` 状態として扱い、警告オーバーレイを表示します。
@@ -99,7 +99,7 @@ WebAppは `tor_active: true` を受信した際に、UI内部で `AUTO_TOR` 状�
 | **デッドマンタイマー** | `300 ms` | マイコン | 操作コマンドが途絶えた場合にモーターを自動停止 |
 | **Pending タイムアウト** | `1,000 ms` | WebApp | モード切替要求後、マイコンの状態が変わらない場合に要求失敗と判定 |
 | **通信切断判定** | `1,500 ms` | WebApp / マイコン | Heartbeat途絶で `DISCONNECTED` 遷移、マイコンは `AUTO_ABORT` |
-| **TOR 猶予時間** | `3,000 〜 5,000 ms` | マイコン | カウントダウンが0に達した場合、マイコンが `AUTO_ABORT` へ自律遷移 |
+| **TOR 猶予時間** | `3,000 ms` (3秒) | マイコン | カウントダウンが0に達した場合、マイコンが `AUTO_ABORT` へ自律遷移 |
 
 ## 4. モード不一致時の安全判定マトリクス
 

@@ -33,9 +33,7 @@ export class StateMachine {
             steering: isManual ? this.app.input.getSteering() : 0,
             mode_request: this.pendingModeRequest,
             manual_abort_request: this.pendingManualAbort,
-            emergency_stop_request: this.pendingManualAbort, // 後方互換性
-            reset_abort_request: this.pendingResetAbort,
-            reset_stop_request: this.pendingResetAbort      // 後方互換性
+            reset_abort_request: this.pendingResetAbort
         };
         this.pendingModeRequest = ModeRequest.NONE;
         this.pendingManualAbort = false;
@@ -80,8 +78,8 @@ export class StateMachine {
 
     syncToMCU() {
         const { mode, tor_active } = this.mcuData;
-        if (mode === MCUMode.MANUAL_ABORT || mode === 'EMERGENCY_STOP') return this.transitionTo(UIState.MANUAL_ABORT);
-        if (mode === MCUMode.AUTO_ABORT || mode === 'SAFE_STOP') return this.transitionTo(UIState.AUTO_ABORT);
+        if (mode === MCUMode.MANUAL_ABORT) return this.transitionTo(UIState.MANUAL_ABORT);
+        if (mode === MCUMode.AUTO_ABORT) return this.transitionTo(UIState.AUTO_ABORT);
         if (mode === MCUMode.AUTO) return this.transitionTo(tor_active ? UIState.AUTO_TOR : UIState.AUTO);
         this.transitionTo(UIState.MANUAL);
     }
@@ -145,17 +143,22 @@ export class StateMachine {
     requestManualAbort() {
         this.pendingManualAbort = true;
         this.clearTimer();
-        // マイコンからの Heartbeat (mode=MANUAL_ABORT) 受信で確定遷移
     }
 
-    requestResetAbort() { this.pendingResetAbort = true; }
+    requestResetAbort() {
+        this.pendingResetAbort = true;
+    }
 
-    // 互換用エイリアス
-    requestStopAction() { return this.requestAbortAction(); }
-    requestEmergencyStop() { return this.requestManualAbort(); }
-    requestResetStop() { return this.requestResetAbort(); }
+    requestTorTakeover() {
+        this.startManualSwitch(true);
+    }
 
-    requestTorTakeover() { this.startManualSwitch(true); }
-    handleDisconnect() { this.clearTimer(); this.transitionTo(UIState.DISCONNECTED); }
-    handleConnect() { this.syncToMCU(); }
+    handleDisconnect() {
+        this.clearTimer();
+        this.transitionTo(UIState.DISCONNECTED);
+    }
+
+    handleConnect() {
+        this.syncToMCU();
+    }
 }

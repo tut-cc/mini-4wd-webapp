@@ -45,7 +45,7 @@ export class UIManager {
 
     renderState(uiState, mcuData) {
         const isDis = uiState === UIState.DISCONNECTED;
-        const isAborted = uiState === UIState.AUTO_ABORT || uiState === UIState.MANUAL_ABORT || uiState === 'SAFE_STOP' || uiState === 'EMERGENCY_STOP';
+        const isAborted = uiState === UIState.AUTO_ABORT || uiState === UIState.MANUAL_ABORT;
         const isTor = uiState === UIState.AUTO_TOR || uiState === UIState.TOR_MANUAL_PENDING;
         const isPending = uiState === UIState.AUTO_PENDING || uiState === UIState.AUTO_MANUAL_PENDING || uiState === UIState.TOR_MANUAL_PENDING;
         const isAuto = uiState === UIState.AUTO || uiState === UIState.AUTO_PENDING || uiState === UIState.AUTO_MANUAL_PENDING;
@@ -64,7 +64,7 @@ export class UIManager {
         if (isAborted && this.el.stopReasonText) {
             let r = mcuData?.stop_reason;
             if (!r || r === 'NONE') {
-                r = (uiState === UIState.MANUAL_ABORT || uiState === 'EMERGENCY_STOP') ? 'MANUAL_ABORT_BUTTON' : 'OBSTACLE';
+                r = (uiState === UIState.MANUAL_ABORT) ? 'MANUAL_ABORT_BUTTON' : 'OBSTACLE';
             }
             this.el.stopReasonText.textContent = StopReasonText[r] || r;
         }

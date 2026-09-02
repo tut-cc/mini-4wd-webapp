@@ -26,7 +26,6 @@ export const StopReasonText = {
     OBSTACLE: '障害物検知',
     TOR_TIMEOUT: '引継ぎ時間切れ',
     MANUAL_ABORT_BUTTON: '手動中断',
-    EMERGENCY_BUTTON: '手動中断',
     COMM_TIMEOUT: '通信切断',
     SENSOR_ERROR: 'センサー異常'
 };
@@ -36,7 +35,6 @@ export const RejectReasonText = {
     SENSOR_NOT_READY: 'センサーが準備できていません',
     IN_TOR: '運転引継ぎ警告中です',
     IN_MANUAL_ABORT: '手動中断中のため操作できません',
-    IN_EMERGENCY: '手動中断中のため操作できません',
     MODE_MISMATCH: '中断中のため切替できません'
 };
 

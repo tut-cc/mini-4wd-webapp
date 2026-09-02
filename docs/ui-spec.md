@@ -140,7 +140,7 @@ stateDiagram-v2
 - **発生契機**: マイコンの Heartbeat で `tor_active = true` を検知した瞬間。
 - **表示内容**:
   - 白枠点滅パルス警告。
-  - 残り時間 `tor_remaining_ms` のリアルタイムカウントダウン（例: `4.5s`）。
+  - 残り時間 `tor_remaining_ms` のリアルタイムカウントダウン（例: `3.0s`）。
   - 中央に特大の **「TAKE OVER」ボタン** を表示。
 
 ### 4.2 MANUAL_ABORT / AUTO_ABORT（中断）画面
