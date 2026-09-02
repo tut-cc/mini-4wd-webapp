@@ -6,13 +6,13 @@
   <title>ミニ四駆 コントローラー</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-state="DISCONNECTED">
   <!-- 車載カメラ映像 -->
   <img id="camera" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
 
   <!-- タッチ操作ゾーン & 仮想ジョイスティック -->
   <div id="touch-zone">
-    <div id="joystick" class="hidden">
+    <div id="joystick" hidden>
       <div id="joystick-thumb"></div>
     </div>
   </div>
@@ -21,22 +21,23 @@
   <header class="top-bar">
     <div id="status-badge" class="badge">
       <span class="status-dot"></span>
-      <span id="status-text">接続中</span>
+      <span id="status-text">未接続</span>
     </div>
     <div id="distance-card" class="badge">
       <span class="label">前方距離</span>
       <span id="distance-val" class="val">1200</span>
       <span class="unit">mm</span>
     </div>
-    <button id="btn-info" class="btn btn-sm">INFO</button>
+    <!-- Popover API: JS不要で開閉・外側タップ閉じが可能 -->
+    <button popovertarget="info-modal" class="btn btn-sm">INFO</button>
   </header>
 
-  <!-- アラート通知 -->
-  <div id="alert-banner" class="hidden">エラー通知</div>
+  <!-- アラート通知 (Popover API manual) -->
+  <div id="alert-banner" popover="manual">エラー通知</div>
 
   <!-- 操作フッター (中断理由 / モード切替 / ABORT) -->
   <footer class="bottom-bar">
-    <div id="stop-reason" class="hidden">中断理由: <span id="stop-reason-text">NONE</span></div>
+    <div id="stop-reason">中断理由: <span id="stop-reason-text">NONE</span></div>
     <div class="action-row">
       <button id="btn-mode" class="action-btn">MANUAL MODE</button>
       <button id="btn-stop" class="action-btn btn-stop">ABORT</button>
@@ -44,7 +45,7 @@
   </footer>
 
   <!-- TOR (Take Over Request) オーバーレイ -->
-  <div id="tor-overlay" class="overlay hidden">
+  <div id="tor-overlay" class="overlay">
     <div class="card tor-card">
       <h2>TAKE OVER REQUEST</h2>
       <p>自動運転の継続が困難です。手動操作へ引き継いでください。</p>
@@ -54,7 +55,7 @@
   </div>
 
   <!-- 切断オーバーレイ -->
-  <div id="disconnected-overlay" class="overlay hidden">
+  <div id="disconnected-overlay" class="overlay">
     <div class="card center">
       <div class="spinner"></div>
       <h2>DISCONNECTED</h2>
@@ -63,17 +64,15 @@
     </div>
   </div>
 
-  <!-- INFO モーダル -->
-  <div id="info-modal" class="overlay backdrop hidden">
-    <div class="card">
-      <h2>操作・機能ガイド</h2>
-      <p class="muted">ミニ四駆 FPV コントローラー</p>
-      <ul>
-        <li><strong>走行操作:</strong> 画面をタッチ＆スワイプ（上下で前後、左右でステアリング）</li>
-        <li><strong>自動運転:</strong> AUTO MODE ボタンで切替要求</li>
-        <li><strong>手動中断:</strong> ABORT ボタンで即時中断（中断後は RESET で復旧）</li>
-      </ul>
-    </div>
+  <!-- INFO モーダル (Popover API auto: 外側タップやESCで自動で閉じる) -->
+  <div id="info-modal" popover class="modal-card">
+    <h2>操作・機能ガイド</h2>
+    <p class="muted">ミニ四駆 FPV コントローラー</p>
+    <ul>
+      <li><strong>走行操作:</strong> 画面をタッチ＆スワイプ（上下で前後、左右でステアリング）</li>
+      <li><strong>自動運転:</strong> AUTO MODE ボタンで切替要求</li>
+      <li><strong>手動中断:</strong> ABORT ボタンで即時中断（中断後は RESET で復旧）</li>
+    </ul>
   </div>
 
   <script type="module" src="js/app.js"></script>

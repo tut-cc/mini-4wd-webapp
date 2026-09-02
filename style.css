@@ -16,16 +16,20 @@ html, body {
   #joystick {
     position: absolute; width: 90px; height: 90px; border-radius: 50%;
     background: rgba(255, 255, 255, 0.9); border: 2px solid #000;
-    pointer-events: none; transform: translate(-50%, -50%); z-index: 15;
+    pointer-events: none; z-index: 15;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    left: var(--x, 0px); top: var(--y, 0px);
+    translate: -50% -50%;
 
     &::before, &::after { content: ''; position: absolute; background: rgba(0, 0, 0, 0.2); }
-    &::before { inset: 10px auto 10px 50%; width: 2px; transform: translateX(-50%); }
-    &::after { inset: 50% 10px auto 10px; height: 2px; transform: translateY(-50%); }
+    &::before { inset: 10px auto 10px 50%; width: 2px; translate: -50% 0; }
+    &::after { inset: 50% 10px auto 10px; height: 2px; translate: 0 -50%; }
 
     #joystick-thumb {
       position: absolute; width: 34px; height: 34px; border-radius: 50%; background: #000;
-      top: 50%; left: 50%; transform: translate(-50%, -50%); transition: transform 0.04s ease-out;
+      top: 50%; left: 50%;
+      translate: calc(-50% + var(--tx, 0px)) calc(-50% + var(--ty, 0px));
+      transition: translate 0.04s ease-out;
     }
   }
 }
@@ -51,7 +55,6 @@ html, body {
   #status-badge {
     padding: 6px 12px; font-size: 0.95rem; gap: 6px;
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #000; }
-    &.disconnected .status-dot { background: transparent; border: 1.5px solid #000; }
   }
 
   #distance-card {
@@ -63,21 +66,22 @@ html, body {
   .btn-sm { padding: 6px 12px; min-height: 40px; font-size: 0.9rem; }
 }
 
-/* 4. アラート通知 */
+/* 4. アラート通知 (Popover API) */
 #alert-banner {
-  position: absolute; top: calc(60px + env(safe-area-inset-top, 0px)); left: 50%;
-  transform: translateX(-50%); background: #fff; border: 2px solid #000; border-radius: 6px;
-  padding: 8px 16px; font-weight: 700; z-index: 50; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  position: fixed; top: calc(60px + env(safe-area-inset-top, 0px)); left: 50%;
+  translate: -50% 0; background: #fff; border: 2px solid #000; border-radius: 6px;
+  padding: 8px 16px; font-weight: 700; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  margin: 0;
 }
 
 /* 5. 操作フッター */
 .bottom-bar {
   position: absolute; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); left: 50%;
-  transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 25;
+  translate: -50% 0; display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 25;
 
   #stop-reason {
-    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; justify-content: center; gap: 4px;
+    position: absolute; bottom: calc(100% + 6px); left: 50%; translate: -50% 0;
+    display: none; align-items: center; justify-content: center; gap: 4px;
     height: 32px; padding: 0 14px; background: #000; border-radius: 6px;
     font-size: 0.85rem; font-weight: 800; color: #aaa; white-space: nowrap; pointer-events: none;
     #stop-reason-text { color: #fff; }
@@ -88,25 +92,24 @@ html, body {
 
     .action-btn {
       width: clamp(150px, 45vw, 185px); height: 50px; font-size: 1.1rem; font-weight: 800; border-width: 2px;
-      &.auto-mode { background: #000; color: #fff; &:active { background: #fff; color: #000; } }
-      &.pending { opacity: 0.7; cursor: wait; }
       &.btn-stop {
         width: clamp(80px, 24vw, 96px); background: #000; color: #fff; font-weight: 900;
         &:active { background: #555; }
-        &.reset-mode { background: #fff; color: #000; &:active { background: #000; color: #fff; } }
       }
     }
   }
 }
 
-/* 6. オーバーレイ & モーダル */
-.hidden { display: none !important; }
-
+/* 6. オーバーレイ & Popover モーダル */
 .overlay {
-  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;
-  &.backdrop { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
-  &#tor-overlay { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px); border: 6px solid #000; animation: flash 0.8s infinite alternate; }
-  &#disconnected-overlay { background: rgba(255, 255, 255, 0.95); }
+  display: none; position: fixed; inset: 0; z-index: 100;
+  align-items: center; justify-content: center; padding: 16px;
+  background: rgba(255, 255, 255, 0.95);
+
+  &#tor-overlay {
+    background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px);
+    border: 6px solid #000; animation: flash 0.8s infinite alternate;
+  }
 
   .card {
     background: #fff; border: 2px solid #000; border-radius: 8px; padding: 20px;
@@ -114,10 +117,53 @@ html, body {
     &.center, &.tor-card { text-align: center; }
     h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; }
     p { font-size: 0.95rem; color: #555; margin-bottom: 10px; }
-    ul { margin: 6px 0 0 18px; line-height: 1.5; font-size: 0.95rem; }
     .muted { font-size: 0.85rem; color: #777; }
     .timer { font-size: 1.35rem; font-weight: 800; margin-bottom: 16px; }
     .btn-lg { width: 100%; height: 48px; background: #000; color: #fff; font-size: 1.15rem; font-weight: 800; }
+  }
+}
+
+/* INFO Popover */
+.modal-card {
+  margin: auto; border: 2px solid #000; border-radius: 8px; padding: 20px;
+  max-width: 400px; width: 90vw; background: #fff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; }
+  .muted { font-size: 0.85rem; color: #777; margin-bottom: 10px; }
+  ul { margin: 6px 0 0 18px; line-height: 1.5; font-size: 0.95rem; }
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+  }
+}
+
+/* 7. 状態駆動スタイル (data-state による宣言的制御) */
+body[data-state="DISCONNECTED"] {
+  #disconnected-overlay { display: flex; }
+  #status-badge .status-dot { background: transparent; border: 1.5px solid #000; }
+  #btn-mode, #btn-stop { opacity: 0.35; pointer-events: none; }
+}
+
+body[data-state="AUTO_TOR"], body[data-state="TOR_MANUAL_PENDING"] {
+  #tor-overlay { display: flex; }
+  #btn-mode { opacity: 0.35; pointer-events: none; }
+}
+
+body[data-state^="AUTO"] #btn-mode {
+  background: #000; color: #fff;
+  &:active { background: #fff; color: #000; }
+}
+
+body[data-state$="_PENDING"] #btn-mode {
+  opacity: 0.7; cursor: wait; pointer-events: none;
+}
+
+body[data-state*="ABORT"] {
+  #stop-reason { display: flex; }
+  #btn-mode { opacity: 0.35; pointer-events: none; }
+  #btn-stop {
+    background: #fff; color: #000;
+    &:active { background: #000; color: #fff; }
   }
 }
 

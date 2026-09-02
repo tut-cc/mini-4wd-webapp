@@ -26,18 +26,19 @@ export class InputController {
         if (!this.zone || !this.base || !this.thumb) return;
 
         this.zone.addEventListener('pointerdown', (e) => {
-            if (!this.enabled || this.pointerId !== null || (e.button !== undefined && e.button !== 0)) return;
+            if (!this.enabled || this.pointerId !== null || e.button > 0) return;
             e.preventDefault();
             this.pointerId = e.pointerId;
-            try { this.zone.setPointerCapture(e.pointerId); } catch (_) {}
+            this.zone.setPointerCapture(e.pointerId);
 
             const rect = this.zone.getBoundingClientRect();
             this.startX = e.clientX;
             this.startY = e.clientY;
-            this.base.style.left = `${e.clientX - rect.left}px`;
-            this.base.style.top = `${e.clientY - rect.top}px`;
-            this.thumb.style.transform = 'translate(-50%, -50%)';
-            this.base.classList.remove('hidden');
+            this.base.style.setProperty('--x', `${e.clientX - rect.left}px`);
+            this.base.style.setProperty('--y', `${e.clientY - rect.top}px`);
+            this.thumb.style.setProperty('--tx', '0px');
+            this.thumb.style.setProperty('--ty', '0px');
+            this.base.hidden = false;
 
             this.throttle = 0;
             this.steering = 0;
@@ -49,14 +50,12 @@ export class InputController {
 
             const dx = e.clientX - this.startX;
             const dy = this.startY - e.clientY; // 上方向が前進(正)
-
             const maxDist = Config.TOUCH_MAX_DISTANCE;
             const dist = Math.hypot(dx, dy);
             const scale = dist > maxDist ? maxDist / dist : 1;
-            const cx = dx * scale;
-            const cy = -dy * scale;
 
-            this.thumb.style.transform = `translate(calc(-50% + ${cx}px), calc(-50% + ${cy}px))`;
+            this.thumb.style.setProperty('--tx', `${dx * scale}px`);
+            this.thumb.style.setProperty('--ty', `${-dy * scale}px`);
 
             this.steering = deadband(clamp(dx / maxDist, -1, 1), Config.INPUT_DEADBAND);
             this.throttle = deadband(clamp(dy / maxDist, -1, 1), Config.INPUT_DEADBAND);
@@ -64,7 +63,6 @@ export class InputController {
 
         const onEnd = (e) => {
             if (this.pointerId !== e.pointerId) return;
-            try { this.zone.releasePointerCapture?.(e.pointerId); } catch (_) {}
             this.reset();
         };
 
@@ -81,14 +79,10 @@ export class InputController {
         this.pointerId = null;
         this.throttle = 0;
         this.steering = 0;
-        this.base?.classList.add('hidden');
+        if (this.base) this.base.hidden = true;
     }
 
-    getThrottle() {
-        return this.enabled ? this.throttle : 0;
-    }
-
-    getSteering() {
-        return this.enabled ? this.steering : 0;
-    }
+    getThrottle() { return this.enabled ? this.throttle : 0; }
+    getSteering() { return this.enabled ? this.steering : 0; }
 }
+
