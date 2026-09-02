@@ -1,5 +1,5 @@
 /**
- * 入力制御モジュール (統合2D仮想ジョイスティック)
+ * 入力制御モジュール
  */
 import { Config } from './constants.js';
 
@@ -49,7 +49,7 @@ export class InputController {
             e.preventDefault();
 
             const dx = e.clientX - this.startX;
-            const dy = this.startY - e.clientY; // 上方向が前進(正)
+            const dy = this.startY - e.clientY; // 上方向が前進
             const maxDist = Config.TOUCH_MAX_DISTANCE;
             const dist = Math.hypot(dx, dy);
             const scale = dist > maxDist ? maxDist / dist : 1;
@@ -85,4 +85,3 @@ export class InputController {
     getThrottle() { return this.enabled ? this.throttle : 0; }
     getSteering() { return this.enabled ? this.steering : 0; }
 }
-

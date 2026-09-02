@@ -1,6 +1,3 @@
-/**
- * ミニ四駆自動運転 WebApp - メインエントリーポイント
- */
 import { InputController } from './input.js';
 import { UIManager } from './ui.js';
 import { CommManager } from './comm.js';

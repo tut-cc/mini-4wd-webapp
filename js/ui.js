@@ -37,7 +37,6 @@ export class UIManager {
         this.el.btnMode?.addEventListener('click', () => this.cb.onDriveModeClick?.());
         this.el.btnStop?.addEventListener('click', () => this.cb.onStopClick?.());
         $('btn-takeover')?.addEventListener('click', () => this.cb.onTorTakeoverClick?.());
-        // INFO モーダルは HTML Popover API により自動管理 (JSイベントリスナー不要)
     }
 
     renderState(uiState, mcuData) {
@@ -70,9 +69,7 @@ export class UIManager {
     showError(msg) {
         if (!this.el.alert) return;
         this.el.alert.textContent = msg;
-        try {
-            this.el.alert.showPopover?.();
-        } catch (_) {}
+        try { this.el.alert.showPopover?.(); } catch (_) {}
         clearTimeout(this.alertTimer);
         this.alertTimer = setTimeout(() => {
             try { this.el.alert.hidePopover?.(); } catch (_) {}

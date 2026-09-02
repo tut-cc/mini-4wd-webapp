@@ -29,4 +29,3 @@ DEFAULT_HOST = "0.0.0.0"
 HEARTBEAT_INTERVAL_SEC = 0.1  # 100ms
 DEADMAN_TIMEOUT_SEC = 0.3     # 300ms
 COMM_TIMEOUT_SEC = 1.5        # 1500ms (通信切断・フェイルセーフ判定)
-

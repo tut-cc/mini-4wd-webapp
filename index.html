@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>ミニ四駆 コントローラー</title>
+  <title>ミニ四駆コントローラー</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-state="DISCONNECTED">
   <!-- 車載カメラ映像 -->
   <img id="camera" src="/video_feed" alt="Camera Stream" crossorigin="anonymous">
 
-  <!-- タッチ操作ゾーン & 仮想ジョイスティック -->
+  <!-- タッチ操作ゾーン -->
   <div id="touch-zone">
     <div id="joystick" hidden>
       <div id="joystick-thumb"></div>
@@ -28,11 +28,9 @@
       <span id="distance-val" class="val">1200</span>
       <span class="unit">mm</span>
     </div>
-    <!-- Popover API: JS不要で開閉・外側タップ閉じが可能 -->
     <button popovertarget="info-modal" class="btn btn-sm">INFO</button>
   </header>
 
-  <!-- アラート通知 (Popover API manual) -->
   <div id="alert-banner" popover="manual">エラー通知</div>
 
   <!-- 操作フッター (中断理由 / モード切替 / ABORT) -->
@@ -44,7 +42,7 @@
     </div>
   </footer>
 
-  <!-- TOR (Take Over Request) オーバーレイ -->
+  <!-- TOR オーバーレイ -->
   <div id="tor-overlay" class="overlay">
     <div class="card tor-card">
       <h2>TAKE OVER REQUEST</h2>
@@ -64,7 +62,7 @@
     </div>
   </div>
 
-  <!-- INFO モーダル (Popover API auto: 外側タップやESCで自動で閉じる) -->
+  <!-- INFO モーダル -->
   <div id="info-modal" popover class="modal-card">
     <h2>操作・機能ガイド</h2>
     <p class="muted">ミニ四駆 FPV コントローラー</p>
