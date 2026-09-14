@@ -24,4 +24,10 @@ export class Mini4WDApp {
     }
 }
 
-window.addEventListener('DOMContentLoaded', () => { window.app = new Mini4WDApp(); });
+const initApp = () => { if (!window.app) window.app = new Mini4WDApp(); };
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
+

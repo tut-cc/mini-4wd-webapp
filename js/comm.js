@@ -8,14 +8,14 @@ export class CommManager {
         this.isRequesting = false;
         this.apiUrl = '/api/command';
 
-        // 100ms周期でコマンド送信 & テレメトリ受信 (定期ポーリング)
-        this.timer = setInterval(() => this.poll(), Config.TRANSMIT_INTERVAL_MS);
+        // 100ms周期でコマンド送信 & テレメトリ受信 (HTTP定期ポーリング)
+        this.timer = setInterval(() => this.poll(), Config.POLLING_INTERVAL_MS);
         this.poll();
     }
 
     async poll() {
         // ハートビート途絶監視 (タイムアウト判定)
-        if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
+        if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) {
             this.onLost();
         }
 
@@ -46,12 +46,12 @@ export class CommManager {
                 }
                 this.cb.onHeartbeat?.(telemetry);
             } else {
-                if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
+                if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) {
                     this.onLost();
                 }
             }
         } catch (_) {
-            if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
+            if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) {
                 this.onLost();
             }
         } finally {

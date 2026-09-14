@@ -11,7 +11,7 @@ import os
 
 from server import (
     VehicleController,
-    HttpWsServer,
+    HttpServer,
     BaseCameraProvider,
 )
 
@@ -71,7 +71,7 @@ async def main():
     camera = RealCameraProvider()
 
     # サーバー初期化
-    server = HttpWsServer(
+    server = HttpServer(
         controller=controller,
         camera_provider=camera,
         static_dir=base_dir,

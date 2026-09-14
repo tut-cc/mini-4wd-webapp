@@ -4,15 +4,18 @@
 
 ## 1. 通信方式の概要
 - **WebApp画面配信**: HTTP GET（`index.html`, `js/*.js`, `style.css` 等をマイコンから直接配信）
-- **制御・テレメトリ通信**: WebSocket（双方向 / テキスト形式 JSON）
-- **通信周期**: 10 Hzで双方向定期通信
-- **ポート統合**: 同一ポート（デフォルト: `8765`）で HTTP静的配信 と WebSocket制御 を同時に提供
+- **制御・テレメトリ通信**: HTTP POST `/api/command` による定期ポーリング（HTTP/1.1 Keep-Alive 永続接続）
+  - WebAppから操作コマンドJSONを `POST /api/command` で送信し、サーバーはそのレスポンス（HTTP 200）として最新のマイコン状態（テレメトリ）JSONを返却。
+  - 単体テレメトリ取得用の `GET /api/telemetry` も提供。
+- **カメラ映像配信**: HTTP multipart/x-mixed-replace（MJPEG `/video_feed`）
+- **ポーリング周期**: 10 Hz (100ms周期)
+- **ポート統合**: 同一ポート（デフォルト: `8765`）で HTTP静的配信、制御API、カメラ映像ストリームをすべて提供
 
 ## 2. データフォーマット仕様
 
-### 2.1 WebApp → マイコン（操作コマンド）
+### 2.1 WebApp → マイコン（操作コマンド: POST /api/command）
 
-WebAppは、自身が現在認識しているモード `client_mode` を付与してコマンドを送信します。マイコン側はこの値と実際の内部状態を照合して実行可否を判定します。
+WebAppは、自身が現在認識しているモード `client_mode` を付与してコマンドを `POST /api/command` で送信します。マイコン側はこの値と実際の内部状態を照合して実行可否を判定します。
 
 ```json
 {
@@ -34,9 +37,9 @@ WebAppは、自身が現在認識しているモード `client_mode` を付与�
 | `manual_abort_request` | `true` / `false` | ○ | 手動中断要求（最優先処理）※旧 `emergency_stop_request` 互換 |
 | `reset_abort_request` | `true` / `false` | ○ | AUTO_ABORT / MANUAL_ABORT の解除・リセット要求 ※旧 `reset_stop_request` 互換 |
 
-### 2.2 マイコン → WebApp（Heartbeat）
+### 2.2 マイコン → WebApp（テレメトリ: レスポンスボディ）
 
-マイコンは100ms周期で自身の最新状態を送信します。
+マイコンは `POST /api/command`（または `GET /api/telemetry`）へのレスポンスとして自身の最新状態をJSON形式で即時返却します。100ms周期のポーリングにより、これがHeartbeatとして機能します。
 
 ```json
 {
@@ -94,11 +97,11 @@ WebAppは `tor_active: true` を受信した際に、UI内部で `AUTO_TOR` 状�
 
 | パラメータ名 | 閾値 / 周期 | 監視主体 | 説明・タイムアウト時の動作 |
 |---|---|---|---|
-| **Heartbeat 送信周期** | `100 ms` | マイコン | マイコンからWebAppへの定期状態通知 |
-| **操作コマンド送信周期** | `100 ms` | WebApp | キー押下中または値変更時の送信周期 |
+| **HTTPポーリング周期** | `100 ms` | WebApp | コマンド送信 (`POST /api/command`) とテレメトリ取得の定期周期 |
+| **Heartbeat 監視** | `100 ms` | マイコン | 内部状態の定周期更新とデッドマン/タイムアウト評価 |
 | **デッドマンタイマー** | `300 ms` | マイコン | 操作コマンドが途絶えた場合にモーターを自動停止 |
 | **Pending タイムアウト** | `1,000 ms` | WebApp | モード切替要求後、マイコンの状態が変わらない場合に要求失敗と判定 |
-| **通信切断判定** | `1,500 ms` | WebApp / マイコン | Heartbeat途絶で `DISCONNECTED` 遷移、マイコンは `AUTO_ABORT` |
+| **通信切断判定** | `1,500 ms` | WebApp / マイコン | テレメトリ途絶で `DISCONNECTED` 遷移、マイコンは `AUTO_ABORT` |
 | **TOR 猶予時間** | `3,000 ms` (3秒) | マイコン | カウントダウンが0に達した場合、マイコンが `AUTO_ABORT` へ自律遷移 |
 
 ## 4. モード不一致時の安全判定マトリクス

@@ -7,7 +7,7 @@ import asyncio
 import os
 
 from server.controller import VehicleController
-from server.http_ws_server import HttpWsServer
+from server.http_server import HttpServer
 from mock.camera import MockCameraProvider
 from mock.scenario import ScenarioManager
 
@@ -21,8 +21,8 @@ async def main():
     # 2. モック用カメラ (疑似白線コース生成)
     camera = MockCameraProvider(controller)
 
-    # 3. 共通HTTP/WebSocketサーバー
-    server = HttpWsServer(
+    # 3. 共通HTTPサーバー (REST API / MJPEG / 静的アセット配信)
+    server = HttpServer(
         controller=controller,
         camera_provider=camera,
         static_dir=BASE_DIR,
@@ -43,10 +43,20 @@ async def main():
     print("==================================================")
 
     # サーバーとキーボード入力ループを並行実行
-    await asyncio.gather(
-        server.serve_forever(),
-        scenario_mgr.terminal_input_loop()
-    )
+    server_task = asyncio.create_task(server.serve_forever())
+    input_task = asyncio.create_task(scenario_mgr.terminal_input_loop())
+    try:
+        done, pending = await asyncio.wait(
+            [server_task, input_task],
+            return_when=asyncio.FIRST_EXCEPTION
+        )
+        for task in done:
+            if task.exception():
+                raise task.exception()
+    finally:
+        server_task.cancel()
+        input_task.cancel()
+        await server.close()
 
 if __name__ == "__main__":
     try:

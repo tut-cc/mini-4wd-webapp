@@ -83,6 +83,8 @@ class ScenarioManager:
         if name in self.scenarios:
             scenario_data = self.scenarios[name]
             self.controller.state.update(scenario_data)
+            if self.controller.last_command_time is not None:
+                self.controller.last_command_time = time.monotonic()
             print(f"\n[Scenario] -> {name} applied (Mode: {self.controller.state['mode']})")
 
     async def terminal_input_loop(self):

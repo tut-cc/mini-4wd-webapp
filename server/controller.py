@@ -26,7 +26,7 @@ class VehicleController:
         # 出力指示値
         self.throttle = 0.0
         self.steering = 0.0
-        self.last_command_time = time.monotonic()
+        self.last_command_time = None
 
     def get_telemetry(self) -> dict:
         """WebAppに配信する最新状態辞書"""
@@ -79,6 +79,8 @@ class VehicleController:
             self.state["tor_active"] = False
             self.state["tor_remaining_ms"] = 0
             self._apply_motor(0.0, 0.0)
+            if self.last_command_time is not None:
+                self.last_command_time = time.monotonic()
             return True
         else:
             self.state["request_reject_reason"] = RejectReason.OBSTACLE_NEAR
@@ -168,16 +170,17 @@ class VehicleController:
             if self.state["tor_remaining_ms"] == 0:
                 self.trigger_auto_abort(StopReason.TOR_TIMEOUT)
 
-        # 通信途絶監視 (1.5秒間コマンド未受信で AUTO_ABORT)
-        if self.state["mode"] not in (MCUMode.AUTO_ABORT, MCUMode.MANUAL_ABORT):
-            if time.monotonic() - self.last_command_time > COMM_TIMEOUT_SEC:
-                self.trigger_auto_abort(StopReason.COMM_TIMEOUT)
+        # 通信途絶監視 (初回コマンド受信後、1.5秒間コマンド未受信で AUTO_ABORT)
+        if self.last_command_time is not None:
+            if self.state["mode"] not in (MCUMode.AUTO_ABORT, MCUMode.MANUAL_ABORT):
+                if time.monotonic() - self.last_command_time > COMM_TIMEOUT_SEC:
+                    self.trigger_auto_abort(StopReason.COMM_TIMEOUT)
 
-        # デッドマン監視 (MANUAL走行中に指示途絶でモーター停止)
-        if self.state["mode"] == MCUMode.MANUAL:
-            if time.monotonic() - self.last_command_time > DEADMAN_TIMEOUT_SEC:
-                if self.throttle != 0.0 or self.steering != 0.0:
-                    self._apply_motor(0.0, 0.0)
+            # デッドマン監視 (MANUAL走行中に指示途絶でモーター停止)
+            if self.state["mode"] == MCUMode.MANUAL:
+                if time.monotonic() - self.last_command_time > DEADMAN_TIMEOUT_SEC:
+                    if self.throttle != 0.0 or self.steering != 0.0:
+                        self._apply_motor(0.0, 0.0)
 
     def _apply_motor(self, throttle: float, steering: float):
         self.throttle = throttle

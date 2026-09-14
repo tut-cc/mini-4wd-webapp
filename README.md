@@ -3,13 +3,13 @@
 
 ## 起動・利用手順
 
-マイコン（`mock_server.py`）が **Web操作画面の配信（HTTP）** と **リアルタイム制御通信（WebSocket）** の両方を同一ポート（8765）で提供します。
+マイコン（`mock_server.py`）が **Web操作画面の配信（HTTP）** と **リアルタイム制御・テレメトリ通信（HTTP Keep-Alive ポーリング）** の両方を同一ポート（8765）で提供します。
 
 ### 1. サーバーを起動
 ```bash
 python3 mock_server.py
 ```
-- ポート `8765` で Webサーバー＆WebSocketサーバーが起動します。
+- ポート `8765` で Webサーバー（REST API / MJPEG / 静的配信）が起動します。
 - ターミナル上で `1` 〜 `5` のキーを押すことで、動作シナリオ（手動走行、自動運転、TOR警告、自動中断、手動中断）をリアルタイムに切り替えられます。
 
 ### 2. ブラウザ（スマホまたはPC）でアクセス
@@ -28,7 +28,7 @@ mini-4wd-webapp/
 ├── server/                     # 車載マイコン・実機でもそのまま使える共通パッケージ
 │   ├── constants.py            # プロトコル定数 (モード・停止要因・拒否理由)
 │   ├── controller.py           # 制御コア (Source of Truth・安全マトリクス・TOR・デッドマン監視)
-│   ├── http_ws_server.py       # 軽量非同期HTTP/WebSocket/MJPEGサーバー (標準ライブラリのみ)
+│   ├── http_server.py          # 軽量非同期HTTP/REST/MJPEGサーバー (標準ライブラリのみ、Keep-Alive対応)
 │   └── camera_base.py          # カメラ映像プロバイダの基底インターフェース
 │
 ├── mock/                       # モック開発専用パッケージ
