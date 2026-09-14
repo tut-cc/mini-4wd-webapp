@@ -1,19 +1,15 @@
 """
-HTTP / WebSocket / MJPEG 統合非同期サーバー
-外部ライブラリ (pip) 不要・標準ライブラリのみで軽量動作
+HTTP 統合非同期サーバー (標準ライブラリのみ)
+REST API (/api/command, /api/telemetry) + MJPEGストリーミング + 静的アセット配信
 """
 import asyncio
-import base64
-import hashlib
 import json
 import os
-import struct
 from typing import Optional, Protocol
 
 from .constants import DEFAULT_HOST, DEFAULT_PORT, HEARTBEAT_INTERVAL_SEC
 from .controller import VehicleController
 
-WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
@@ -29,54 +25,7 @@ MIME_TYPES = {
 class CameraProvider(Protocol):
     def get_frame(self) -> bytes: ...
 
-def encode_ws_frame(msg: str) -> bytes:
-    """テキストメッセージを WebSocket 送信フレーム (Opcode 0x1) に変換"""
-    data = msg.encode("utf-8")
-    length = len(data)
-    if length <= 125:
-        header = bytes([0x81, length])
-    elif length <= 65535:
-        header = struct.pack("!BBH", 0x81, 126, length)
-    else:
-        header = struct.pack("!BBQ", 0x81, 127, length)
-    return header + data
-
-def decode_ws_frame(data: bytes):
-    """
-    受信バイナリから WebSocket フレームを解析
-    :return: ((opcode, payload), consumed_bytes) または (None, 0)
-    """
-    if len(data) < 2:
-        return None, 0
-    opcode = data[0] & 0x0F
-    masked = bool(data[1] & 0x80)
-    length = data[1] & 0x7F
-    idx = 2
-
-    if length == 126:
-        if len(data) < 4:
-            return None, 0
-        length = struct.unpack("!H", data[2:4])[0]
-        idx = 4
-    elif length == 127:
-        if len(data) < 10:
-            return None, 0
-        length = struct.unpack("!Q", data[2:10])[0]
-        idx = 10
-
-    if masked:
-        if len(data) < idx + 4 + length:
-            return None, 0
-        mask = data[idx : idx + 4]
-        raw = data[idx + 4 : idx + 4 + length]
-        payload = bytes(b ^ mask[i % 4] for i, b in enumerate(raw))
-        return (opcode, payload), idx + 4 + length
-
-    if len(data) < idx + length:
-        return None, 0
-    return (opcode, data[idx : idx + length]), idx + length
-
-class HttpWsServer:
+class HttpServer:
     def __init__(
         self,
         controller: VehicleController,
@@ -92,19 +41,20 @@ class HttpWsServer:
         self.host = host
         self.port = port
         self.heartbeat_interval = heartbeat_interval
-        self.clients = set()
         self._server = None
 
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        """HTTPリクエスト受付およびプロトコル分岐 (WebSocket / MJPEG / 静的配信)"""
+        """HTTPリクエスト受付 (API / MJPEG / 静的配信)"""
         try:
-            req = await reader.read(4096)
-            if not req:
+            req_data = await reader.read(4096)
+            if not req_data:
                 writer.close()
                 return
 
-            lines = req.decode("utf-8", errors="ignore").split("\r\n")
+            header_part, _, body_part = req_data.partition(b"\r\n\r\n")
+            lines = header_part.decode("utf-8", errors="ignore").split("\r\n")
             parts = lines[0].split(" ") if lines else []
+            method = parts[0].upper() if parts else "GET"
             path = (parts[1] if len(parts) > 1 else "/").split("?")[0]
             headers = {
                 k.strip().lower(): v.strip()
@@ -113,64 +63,73 @@ class HttpWsServer:
                 for k, v in [line.split(":", 1)]
             }
 
-            # 1. WebSocket 制御通信
-            if headers.get("upgrade", "").lower() == "websocket" and "sec-websocket-key" in headers:
-                await self._handle_websocket(reader, writer, headers["sec-websocket-key"])
+            # CORS プリフライト対応
+            if method == "OPTIONS":
+                writer.write(
+                    b"HTTP/1.1 204 No Content\r\n"
+                    b"Access-Control-Allow-Origin: *\r\n"
+                    b"Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                    b"Access-Control-Allow-Headers: Content-Type\r\n\r\n"
+                )
+                await writer.drain()
                 return
 
-            # 2. カメラ MJPEG ストリーミング
+            # 1. 制御API: コマンド受信 & 最新テレメトリ返却 (/api/command)
+            if path == "/api/command":
+                content_length = int(headers.get("content-length", 0))
+                body = body_part
+                if len(body) < content_length:
+                    body += await reader.readexactly(content_length - len(body))
+
+                if method == "POST" and body:
+                    try:
+                        cmd = json.loads(body.decode("utf-8", errors="ignore"))
+                        self.controller.process_command(cmd)
+                    except Exception:
+                        pass
+
+                # 最新テレメトリをレスポンスとして返却
+                telemetry = self.controller.get_telemetry()
+                resp_bytes = json.dumps(telemetry).encode("utf-8")
+                header = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json; charset=utf-8\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    f"Content-Length: {len(resp_bytes)}\r\n\r\n"
+                ).encode("utf-8")
+                writer.write(header + resp_bytes)
+                await writer.drain()
+                return
+
+            # 2. テレメトリ単体取得API (/api/telemetry)
+            if path == "/api/telemetry":
+                telemetry = self.controller.get_telemetry()
+                resp_bytes = json.dumps(telemetry).encode("utf-8")
+                header = (
+                    "HTTP/1.1 200 OK\r\n"
+                    "Content-Type: application/json; charset=utf-8\r\n"
+                    "Access-Control-Allow-Origin: *\r\n"
+                    f"Content-Length: {len(resp_bytes)}\r\n\r\n"
+                ).encode("utf-8")
+                writer.write(header + resp_bytes)
+                await writer.drain()
+                return
+
+            # 3. カメラ MJPEG ストリーミング (/video_feed, /stream)
             if path in ("/video_feed", "/stream"):
                 await self._handle_mjpeg_stream(writer)
                 return
 
-            # 3. 静的ファイル配信 (index.html, JS, CSS)
+            # 4. 静的Webアセット配信 (index.html, JS, CSS)
             await self._handle_static_file(writer, path)
 
         except Exception:
             pass
         finally:
-            writer.close()
-
-    async def _handle_websocket(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, ws_key: str):
-        """WebSocket ハンドシェイクおよびメッセージ受信ループ"""
-        accept = base64.b64encode(hashlib.sha1((ws_key + WS_GUID).encode()).digest()).decode()
-        writer.write(
-            f"HTTP/1.1 101 Switching Protocols\r\n"
-            f"Upgrade: websocket\r\n"
-            f"Connection: Upgrade\r\n"
-            f"Sec-WebSocket-Accept: {accept}\r\n\r\n".encode()
-        )
-        await writer.drain()
-        self.clients.add(writer)
-
-        buf = bytearray()
-        try:
-            while True:
-                chunk = await reader.read(4096)
-                if not chunk:
-                    break
-                buf.extend(chunk)
-
-                while True:
-                    frame, consumed = decode_ws_frame(buf)
-                    if not frame:
-                        break
-                    buf = buf[consumed:]
-                    opcode, payload = frame
-
-                    if opcode == 0x8:  # Close
-                        return
-                    elif opcode == 0x9:  # Ping -> Pong
-                        writer.write(bytes([0x8A, 0x00]))
-                        await writer.drain()
-                    elif opcode == 0x1:  # Text
-                        try:
-                            cmd = json.loads(payload.decode("utf-8", errors="ignore"))
-                            self.controller.process_command(cmd)
-                        except Exception:
-                            pass
-        finally:
-            self.clients.discard(writer)
+            try:
+                writer.close()
+            except Exception:
+                pass
 
     async def _handle_mjpeg_stream(self, writer: asyncio.StreamWriter):
         """MJPEG カメラストリーム配信 (/video_feed)"""
@@ -221,28 +180,18 @@ class HttpWsServer:
             )
         await writer.drain()
 
-    async def heartbeat_loop(self):
-        """定期周期更新 & 全WebSocketクライアントへの最新テレメトリ一括送信 (100ms周期)"""
+    async def tick_loop(self):
+        """定期周期更新 (TORカウントダウン・通信途絶監視・デッドマンタイマー / 100ms周期)"""
         interval_ms = int(self.heartbeat_interval * 1000)
         while True:
             self.controller.tick(interval_ms)
-            telemetry = self.controller.get_telemetry()
-            frame = encode_ws_frame(json.dumps(telemetry))
-
-            disconnected = set()
-            for client in self.clients:
-                try:
-                    client.write(frame)
-                    await client.drain()
-                except Exception:
-                    disconnected.add(client)
-            for d in disconnected:
-                self.clients.discard(d)
-
             await asyncio.sleep(self.heartbeat_interval)
 
     async def serve_forever(self):
         """サーバーの起動と並行実行"""
         self._server = await asyncio.start_server(self.handle_client, self.host, self.port)
         print(f"Mini 4WD Server running at http://{self.host}:{self.port}")
-        await asyncio.gather(self._server.serve_forever(), self.heartbeat_loop())
+        await asyncio.gather(self._server.serve_forever(), self.tick_loop())
+
+# 既存コードとの互換性用エイリアス
+HttpWsServer = HttpServer

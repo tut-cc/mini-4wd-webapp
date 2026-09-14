@@ -1,7 +1,7 @@
 from .constants import MCUMode, StopReason, RejectReason, DEFAULT_HOST, DEFAULT_PORT, HEARTBEAT_INTERVAL_SEC, DEADMAN_TIMEOUT_SEC
 from .controller import VehicleController
 from .camera_base import BaseCameraProvider
-from .http_ws_server import HttpWsServer
+from .http_ws_server import HttpServer, HttpWsServer
 
 __all__ = [
     "MCUMode",
@@ -13,5 +13,6 @@ __all__ = [
     "DEADMAN_TIMEOUT_SEC",
     "VehicleController",
     "BaseCameraProvider",
+    "HttpServer",
     "HttpWsServer",
 ]

@@ -3,41 +3,59 @@ import { Config } from './constants.js';
 export class CommManager {
     constructor(cb) {
         this.cb = cb;
-        this.ws = null;
         this.lastHeartbeat = 0;
         this.connected = false;
-        this.wsUrl = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host || 'localhost:8765'}`;
+        this.isRequesting = false;
+        this.apiUrl = '/api/command';
 
-        this.connect();
-        setInterval(() => {
-            if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) this.onLost();
-            if (this.ws?.readyState === WebSocket.OPEN) {
-                const payload = this.cb.getTransmitPayload?.();
-                if (payload) this.ws.send(JSON.stringify(payload));
-            }
-        }, Config.TRANSMIT_INTERVAL_MS);
+        // 100ms周期でコマンド送信 & テレメトリ受信 (定期ポーリング)
+        this.timer = setInterval(() => this.poll(), Config.TRANSMIT_INTERVAL_MS);
+        this.poll();
     }
 
-    connect() {
-        try {
-            this.ws = new WebSocket(this.wsUrl);
-            this.ws.onopen = () => {
-                this.connected = true;
-                this.lastHeartbeat = Date.now();
-                this.cb.onConnect?.();
-            };
-            this.ws.onmessage = (e) => {
-                this.lastHeartbeat = Date.now();
-                if (!this.connected) { this.connected = true; this.cb.onConnect?.(); }
-                try { this.cb.onHeartbeat?.(JSON.parse(e.data)); } catch (_) {}
-            };
-            this.ws.onclose = this.ws.onerror = () => {
-                this.onLost();
-                setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
-            };
-        } catch (_) {
+    async poll() {
+        // ハートビート途絶監視 (タイムアウト判定)
+        if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
             this.onLost();
-            setTimeout(() => this.connect(), Config.WS_RECONNECT_DELAY_MS);
+        }
+
+        // 前のリクエストがまだ通信中ならスキップ (リクエスト滞留・逆転防止)
+        if (this.isRequesting) return;
+
+        const payload = this.cb.getTransmitPayload?.() || {};
+
+        this.isRequesting = true;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 800);
+
+            const res = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                const telemetry = await res.json();
+                this.lastHeartbeat = Date.now();
+                if (!this.connected) {
+                    this.connected = true;
+                    this.cb.onConnect?.();
+                }
+                this.cb.onHeartbeat?.(telemetry);
+            } else {
+                if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
+                    this.onLost();
+                }
+            }
+        } catch (_) {
+            if (this.connected && Date.now() - this.lastHeartbeat > Config.WS_HEARTBEAT_TIMEOUT_MS) {
+                this.onLost();
+            }
+        } finally {
+            this.isRequesting = false;
         }
     }
 
