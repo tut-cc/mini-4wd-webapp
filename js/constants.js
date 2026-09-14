@@ -3,32 +3,32 @@ export const UIState = Object.fromEntries([
     'TOR_MANUAL_PENDING', 'AUTO', 'AUTO_TOR', 'AUTO_ABORT', 'MANUAL_ABORT'
 ].map(k => [k, k]));
 
-export const MCUMode = Object.fromEntries(['MANUAL', 'AUTO', 'AUTO_ABORT', 'MANUAL_ABORT'].map(k => [k, k]));
+export const MCUMode     = Object.fromEntries(['MANUAL', 'AUTO', 'AUTO_ABORT', 'MANUAL_ABORT'].map(k => [k, k]));
 export const ModeRequest = { NONE: 'NONE', MANUAL: 'MANUAL', AUTO: 'AUTO' };
 
 export const StopReasonText = {
-    OBSTACLE: '障害物検知',
-    TOR_TIMEOUT: '引継ぎ時間切れ',
+    OBSTACLE:            '障害物検知',
+    TOR_TIMEOUT:         '引継ぎ時間切れ',
     MANUAL_ABORT_BUTTON: '手動中断',
-    COMM_TIMEOUT: '通信切断',
-    SENSOR_ERROR: 'センサー異常'
+    COMM_TIMEOUT:        '通信切断',
+    SENSOR_ERROR:        'センサー異常'
 };
 
 export const RejectReasonText = {
-    OBSTACLE_NEAR: '前方に障害物があります',
+    OBSTACLE_NEAR:    '前方に障害物があります',
     SENSOR_NOT_READY: 'センサーが準備できていません',
-    IN_TOR: '運転引継ぎ警告中です',
-    IN_MANUAL_ABORT: '手動中断中のため操作できません',
-    MODE_MISMATCH: '中断中のため切替できません'
+    IN_TOR:           '運転引継ぎ警告中です',
+    IN_MANUAL_ABORT:  '手動中断中のため操作できません',
+    MODE_MISMATCH:    '中断中のため切替できません'
 };
 
 export const Config = {
-    POLLING_INTERVAL_MS: 100,
-    TRANSMIT_INTERVAL_MS: 100,
-    HEARTBEAT_TIMEOUT_MS: 1500,
-    WS_HEARTBEAT_TIMEOUT_MS: 1500,
-    MODE_SWITCH_TIMEOUT_MS: 1000,
+    POLLING_INTERVAL_MS:       100,
+    TRANSMIT_INTERVAL_MS:      100,
+    HEARTBEAT_TIMEOUT_MS:      1500,
+    WS_HEARTBEAT_TIMEOUT_MS:   1500,
+    MODE_SWITCH_TIMEOUT_MS:    1000,
     ALERT_DISPLAY_DURATION_MS: 3000,
-    TOUCH_MAX_DISTANCE: 60,
-    INPUT_DEADBAND: 0.05
+    TOUCH_MAX_DISTANCE:        60,
+    INPUT_DEADBAND:            0.05
 };

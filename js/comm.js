@@ -2,11 +2,11 @@ import { Config } from './constants.js';
 
 export class CommManager {
     constructor(cb) {
-        this.cb = cb;
+        this.cb            = cb;
         this.lastHeartbeat = 0;
-        this.connected = false;
-        this.isRequesting = false;
-        this.apiUrl = '/api/command';
+        this.connected     = false;
+        this.isRequesting  = false;
+        this.apiUrl        = '/api/command';
 
         // 100ms周期でコマンド送信 & テレメトリ受信 (HTTP定期ポーリング)
         this.timer = setInterval(() => this.poll(), Config.POLLING_INTERVAL_MS);
@@ -15,9 +15,7 @@ export class CommManager {
 
     async poll() {
         // ハートビート途絶監視 (タイムアウト判定)
-        if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) {
-            this.onLost();
-        }
+        if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost();
 
         // 前のリクエストがまだ通信中ならスキップ (リクエスト滞留・逆転防止)
         if (this.isRequesting) return;
@@ -27,18 +25,18 @@ export class CommManager {
         this.isRequesting = true;
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 800);
+            const timeoutId  = setTimeout(() => controller.abort(), 800);
 
             const res = await fetch(this.apiUrl, {
-                method: 'POST',
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal
+                body:    JSON.stringify(payload),
+                signal:  controller.signal
             });
             clearTimeout(timeoutId);
 
             if (res.ok) {
-                const telemetry = await res.json();
+                const telemetry    = await res.json();
                 this.lastHeartbeat = Date.now();
                 if (!this.connected) {
                     this.connected = true;
@@ -46,14 +44,10 @@ export class CommManager {
                 }
                 this.cb.onHeartbeat?.(telemetry);
             } else {
-                if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) {
-                    this.onLost();
-                }
+                if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost();
             }
         } catch (_) {
-            if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) {
-                this.onLost();
-            }
+            if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost();
         } finally {
             this.isRequesting = false;
         }

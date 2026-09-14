@@ -7,12 +7,12 @@ const norm = (v) => {
 
 export class InputController {
     constructor() {
-        this.zone = document.getElementById('touch-zone');
-        this.base = document.getElementById('joystick');
-        this.thumb = document.getElementById('joystick-thumb');
+        this.zone      = document.getElementById('touch-zone');
+        this.base      = document.getElementById('joystick');
+        this.thumb     = document.getElementById('joystick-thumb');
         this.pointerId = null;
-        this.throttle = this.steering = this.startX = this.startY = 0;
-        this.enabled = true;
+        this.throttle  = this.steering = this.startX = this.startY = 0;
+        this.enabled   = true;
         this.initEvents();
     }
 
@@ -32,14 +32,14 @@ export class InputController {
             this.thumb.style.setProperty('--tx', '0px');
             this.thumb.style.setProperty('--ty', '0px');
             this.base.hidden = false;
-            this.throttle = this.steering = 0;
+            this.throttle    = this.steering = 0;
         };
 
         this.zone.onpointermove = (e) => {
             if (this.pointerId !== e.pointerId) return;
-            const dx = e.clientX - this.startX;
-            const dy = this.startY - e.clientY; // 上方向が前進
-            const dist = Math.hypot(dx, dy);
+            const dx    = e.clientX - this.startX;
+            const dy    = this.startY - e.clientY; // 上方向が前進
+            const dist  = Math.hypot(dx, dy);
             const scale = dist > Config.TOUCH_MAX_DISTANCE ? Config.TOUCH_MAX_DISTANCE / dist : 1;
 
             this.thumb.style.setProperty('--tx', `${dx * scale}px`);
@@ -60,7 +60,7 @@ export class InputController {
 
     reset() {
         this.pointerId = null;
-        this.throttle = this.steering = 0;
+        this.throttle  = this.steering = 0;
         if (this.base) this.base.hidden = true;
     }
 

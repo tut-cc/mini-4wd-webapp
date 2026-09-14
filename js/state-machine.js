@@ -2,24 +2,24 @@ import { UIState, MCUMode, ModeRequest, RejectReasonText, Config } from './const
 
 export class StateMachine {
     constructor(app) {
-        this.app = app;
-        this.state = UIState.DISCONNECTED;
-        this.timer = null;
-        this.mcuData = { mode: MCUMode.MANUAL, front_distance_mm: 1200 };
+        this.app                = app;
+        this.state              = UIState.DISCONNECTED;
+        this.timer              = null;
+        this.mcuData            = { mode: MCUMode.MANUAL, front_distance_mm: 1200 };
         this.pendingModeRequest = ModeRequest.NONE;
         this.pendingManualAbort = false;
-        this.pendingResetAbort = false;
+        this.pendingResetAbort  = false;
     }
 
     getTransmitPayload() {
         const isManual = this.state === UIState.MANUAL;
         const payload = {
-            client_mode: this.state.includes('ABORT') ? this.state : (this.state.startsWith('AUTO') ? 'AUTO' : 'MANUAL'),
-            throttle: isManual ? this.app.input.getThrottle() : 0,
-            steering: isManual ? this.app.input.getSteering() : 0,
-            mode_request: this.pendingModeRequest,
+            client_mode:          this.state.includes('ABORT') ? this.state : (this.state.startsWith('AUTO') ? 'AUTO' : 'MANUAL'),
+            throttle:             isManual ? this.app.input.getThrottle() : 0,
+            steering:             isManual ? this.app.input.getSteering() : 0,
+            mode_request:         this.pendingModeRequest,
             manual_abort_request: this.pendingManualAbort,
-            reset_abort_request: this.pendingResetAbort
+            reset_abort_request:  this.pendingResetAbort
         };
         this.pendingModeRequest = ModeRequest.NONE;
         this.pendingManualAbort = this.pendingResetAbort = false;
@@ -98,11 +98,11 @@ export class StateMachine {
     }
 
     requestAbortAction() {
-        if (this.state.includes('ABORT')) this.pendingResetAbort = true;
+        if   (this.state.includes('ABORT')) this.pendingResetAbort = true;
         else { this.pendingManualAbort = true; this.clearTimer(); }
     }
 
     requestTorTakeover() { this.startManualSwitch(true); }
-    handleDisconnect() { this.clearTimer(); this.transitionTo(UIState.DISCONNECTED); }
-    handleConnect() { this.syncToMCU(); }
+    handleDisconnect()   { this.clearTimer(); this.transitionTo(UIState.DISCONNECTED); }
+    handleConnect()      { this.syncToMCU(); }
 }
