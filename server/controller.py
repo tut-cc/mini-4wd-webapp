@@ -3,7 +3,7 @@
 マイコン実機・モック共通の Source of Truth (状態管理) & 安全判定ロジック
 """
 import time
-from typing import Callable, Optional
+from typing     import Callable, Optional
 from .constants import MCUMode, StopReason, RejectReason, DEADMAN_TIMEOUT_SEC, COMM_TIMEOUT_SEC
 
 class VehicleController:
@@ -15,17 +15,17 @@ class VehicleController:
 
         # 車両の確定状態 (Heartbeatとして配信)
         self.state = {
-            "mode": MCUMode.MANUAL,
-            "front_distance_mm": 1200,
-            "tor_active": False,
-            "tor_remaining_ms": 0,
-            "stop_reason": StopReason.NONE,
+            "mode":                  MCUMode.MANUAL,
+            "front_distance_mm":     1200,
+            "tor_active":            False,
+            "tor_remaining_ms":      0,
+            "stop_reason":           StopReason.NONE,
             "request_reject_reason": RejectReason.NONE,
         }
 
         # 出力指示値
-        self.throttle = 0.0
-        self.steering = 0.0
+        self.throttle          = 0.0
+        self.steering          = 0.0
         self.last_command_time = None
 
     def get_telemetry(self) -> dict:
@@ -46,25 +46,25 @@ class VehicleController:
 
     def trigger_manual_abort(self, reason: str = StopReason.MANUAL_ABORT_BUTTON):
         """手動中断 (最優先)"""
-        self.state["mode"] = MCUMode.MANUAL_ABORT
-        self.state["stop_reason"] = reason
-        self.state["tor_active"] = False
-        self.state["tor_remaining_ms"] = 0
+        self.state["mode"                 ] = MCUMode.MANUAL_ABORT
+        self.state["stop_reason"          ] = reason
+        self.state["tor_active"           ] = False
+        self.state["tor_remaining_ms"     ] = 0
         self.state["request_reject_reason"] = RejectReason.NONE
         self._apply_motor(0.0, 0.0)
 
     def trigger_auto_abort(self, reason: str = StopReason.OBSTACLE):
         """自律安全中断"""
-        self.state["mode"] = MCUMode.AUTO_ABORT
-        self.state["stop_reason"] = reason
-        self.state["tor_active"] = False
+        self.state["mode"            ] = MCUMode.AUTO_ABORT
+        self.state["stop_reason"     ] = reason
+        self.state["tor_active"      ] = False
         self.state["tor_remaining_ms"] = 0
         self._apply_motor(0.0, 0.0)
 
     def trigger_tor(self, duration_ms: int = 3000):
         """TOR (運転引継ぎ要求) 発動"""
         if self.state["mode"] == MCUMode.AUTO:
-            self.state["tor_active"] = True
+            self.state["tor_active"      ] = True
             self.state["tor_remaining_ms"] = duration_ms
 
     def reset_abort(self) -> bool:
@@ -73,11 +73,11 @@ class VehicleController:
             return False
 
         if self.state["front_distance_mm"] > 200:
-            self.state["mode"] = MCUMode.MANUAL
-            self.state["stop_reason"] = StopReason.NONE
+            self.state["mode"                 ] = MCUMode.MANUAL
+            self.state["stop_reason"          ] = StopReason.NONE
             self.state["request_reject_reason"] = RejectReason.NONE
-            self.state["tor_active"] = False
-            self.state["tor_remaining_ms"] = 0
+            self.state["tor_active"           ] = False
+            self.state["tor_remaining_ms"     ] = 0
             self._apply_motor(0.0, 0.0)
             if self.last_command_time is not None:
                 self.last_command_time = time.monotonic()
@@ -104,7 +104,7 @@ class VehicleController:
                 return False
             if current_mode == MCUMode.MANUAL:
                 if self.state["front_distance_mm"] > 300:
-                    self.state["mode"] = MCUMode.AUTO
+                    self.state["mode"                 ] = MCUMode.AUTO
                     self.state["request_reject_reason"] = RejectReason.NONE
                     self._apply_motor(0.0, 0.0)
                     return True
@@ -117,9 +117,9 @@ class VehicleController:
 
         elif target_mode == MCUMode.MANUAL:
             # AUTOやTOR等からMANUALへの手動介入 (即時受諾)
-            self.state["mode"] = MCUMode.MANUAL
-            self.state["tor_active"] = False
-            self.state["tor_remaining_ms"] = 0
+            self.state["mode"                 ] = MCUMode.MANUAL
+            self.state["tor_active"           ] = False
+            self.state["tor_remaining_ms"     ] = 0
             self.state["request_reject_reason"] = RejectReason.NONE
             return True
 
@@ -131,7 +131,7 @@ class VehicleController:
             return
 
         self.last_command_time = time.monotonic()
-        client_mode = cmd.get("client_mode")
+        client_mode            = cmd.get("client_mode")
 
         # 1. 手動中断要求 (最優先)
         if cmd.get("manual_abort_request"):

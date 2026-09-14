@@ -51,9 +51,9 @@ DEFAULT_SCENARIOS = {
 }
 
 KEYMAP = {
-    "1": "manual_ready",
+    "1": "manual_ready" ,
     "2": "auto_cruising",
-    "3": "tor_warning",
+    "3": "tor_warning"  ,
     "4": "obstacle_stop",
     "5": "emergency_stop"
 }

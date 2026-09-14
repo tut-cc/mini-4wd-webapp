@@ -46,10 +46,5 @@ export class CommManager {
         finally   { this.isRequesting = false; }
     }
 
-    onLost() {
-        if (this.connected) {
-            this.connected = false;
-            this.cb.onDisconnect?.();
-        }
-    }
+    onLost() { if (this.connected) { this.connected = false; this.cb.onDisconnect?.(); } }
 }

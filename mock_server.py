@@ -6,12 +6,12 @@ Mini 4WD WebApp - Mock Server
 import asyncio
 import os
 
-from server.controller import VehicleController
+from server.controller  import VehicleController
 from server.http_server import HttpServer
-from mock.camera import MockCameraProvider
-from mock.scenario import ScenarioManager
+from mock.camera        import MockCameraProvider
+from mock.scenario      import ScenarioManager
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
 SCENARIOS_FILE = os.path.join(BASE_DIR, "mock", "scenarios.json")
 
 async def main():
@@ -32,8 +32,8 @@ async def main():
 
     # 4. モック用シナリオ管理 & キー入力ハンドラ
     scenario_mgr = ScenarioManager(
-        controller=controller,
-        scenarios_file=SCENARIOS_FILE
+        controller     = controller,
+        scenarios_file = SCENARIOS_FILE
     )
 
     print("==================================================")
@@ -44,7 +44,7 @@ async def main():
 
     # サーバーとキーボード入力ループを並行実行
     server_task = asyncio.create_task(server.serve_forever())
-    input_task = asyncio.create_task(scenario_mgr.terminal_input_loop())
+    input_task  = asyncio.create_task(scenario_mgr.terminal_input_loop())
     try:
         done, pending = await asyncio.wait(
             [server_task, input_task],

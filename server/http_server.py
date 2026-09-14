@@ -8,19 +8,19 @@ import json
 import os
 from typing import Optional, Protocol
 
-from .constants import DEFAULT_HOST, DEFAULT_PORT, HEARTBEAT_INTERVAL_SEC
+from .constants  import DEFAULT_HOST, DEFAULT_PORT, HEARTBEAT_INTERVAL_SEC
 from .controller import VehicleController
 
 MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
-    ".js": "application/javascript; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
+    ".js":   "application/javascript; charset=utf-8",
+    ".css":  "text/css; charset=utf-8",
     ".json": "application/json; charset=utf-8",
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
+    ".png":  "image/png",
+    ".jpg":  "image/jpeg",
     ".jpeg": "image/jpeg",
-    ".ico": "image/x-icon",
-    ".svg": "image/svg+xml",
+    ".ico":  "image/x-icon",
+    ".svg":  "image/svg+xml",
 }
 
 class CameraProvider(Protocol):
@@ -292,6 +292,3 @@ class HttpServer:
             await asyncio.gather(self._server.serve_forever(), self.tick_loop())
         finally:
             await self.close()
-
-# 既存コードとの互換性用エイリアス
-HttpWsServer = HttpServer
