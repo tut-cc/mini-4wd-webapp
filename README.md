@@ -33,7 +33,11 @@ mini-4wd-webapp/
 │   ├── scenario.py             # テストシナリオ管理
 │   └── scenarios.json          # シナリオ定義データ
 │
-├── mock_server.py              # モック起動エントリポイント
-└── examples/
-    └── real_server_template.py # マイコン実機向け実装サンプル
+├── mock_server.py              # モック起動エントリポイント (Python版)
+└── sample/                     # C言語実装サンプル (KISS原則・マイコン移植向け)
+    ├── main.c                  # C版エントリポイント & 端末キー入力
+    ├── http_server.c/.h        # 軽量HTTPサーバー (BSD Socket / lwIP両対応)
+    ├── controller.c/.h         # 車両制御コア (安全判定・タイマー)
+    ├── constants.h             # 定数定義
+    └── Makefile                # ビルド設定
 ```
