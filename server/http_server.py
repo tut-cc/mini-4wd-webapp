@@ -12,15 +12,11 @@ from .constants  import DEFAULT_HOST, DEFAULT_PORT, HEARTBEAT_INTERVAL_SEC
 from .controller import VehicleController
 
 MIME_TYPES = {
-    ".html": "text/html; charset=utf-8"             ,
-    ".js"  : "application/javascript; charset=utf-8",
-    ".css" : "text/css; charset=utf-8"              ,
-    ".json": "application/json; charset=utf-8"      ,
-    ".png" : "image/png"                            ,
-    ".jpg" : "image/jpeg"                           ,
-    ".jpeg": "image/jpeg"                           ,
-    ".ico" : "image/x-icon"                         ,
-    ".svg" : "image/svg+xml"                        ,
+    ".html": "text/html; charset=utf-8",
+    ".js":   "application/javascript; charset=utf-8",
+    ".css":  "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".ico":  "image/x-icon",
 }
 
 class CameraProvider(Protocol):
@@ -70,38 +66,27 @@ class HttpServer:
                 path                 = (parts[1] if len(parts) > 1 else "/").split("?")[0]
                 version              = parts[2].upper()    if len(parts) > 2 else "HTTP/1.1"
 
-                headers = {}
+                # 必要なヘッダーのみ抽出 (KISS: 全辞書化を廃止しメモリ・処理を節約)
+                content_length = 0
+                keep_alive = (version != "HTTP/1.0")
                 for line in lines[1:]:
-                    if ":" in line:
-                        k, v = line.split(":", 1)
-                        headers[k.strip().lower()] = v.strip()
-
-                # Keep-Alive 判定 (HTTP/1.1 はデフォルト Keep-Alive、HTTP/1.0 はデフォルト Close)
-                conn_header = headers.get("connection", "").lower()
-                if conn_header == "close":
-                    keep_alive = False
-                elif conn_header == "keep-alive":
-                    keep_alive = True
-                else:
-                    keep_alive = (version != "HTTP/1.0")
-
-                # Expect: 100-continue 対応
-                if headers.get("expect", "").lower() == "100-continue":
-                    writer.write(b"HTTP/1.1 100 Continue\r\n\r\n")
-                    await writer.drain()
+                    low = line.lower()
+                    if low.startswith("content-length:"):
+                        try:
+                            content_length = max(0, int(line.split(":", 1)[1].strip()))
+                        except (ValueError, IndexError):
+                            content_length = 0
+                    elif low.startswith("connection:"):
+                        val = line.split(":", 1)[1].strip().lower()
+                        if val == "close":
+                            keep_alive = False
+                        elif val == "keep-alive":
+                            keep_alive = True
 
                 # 2. ボディの読み込み (Content-Length に応じて)
-                try:
-                    content_length = max(0, int(headers.get("content-length", 0)))
-                except (ValueError, TypeError):
-                    content_length = 0
-
-                if content_length > 10 * 1024 * 1024:
-                    return
-
                 while len(rest) < content_length:
                     try:
-                        chunk = await asyncio.wait_for(reader.read(min(65536, content_length - len(rest))), timeout=self.keepalive_timeout)
+                        chunk = await asyncio.wait_for(reader.read(min(4096, content_length - len(rest))), timeout=self.keepalive_timeout)
                     except asyncio.TimeoutError:
                         return
                     if not chunk:
@@ -113,7 +98,7 @@ class HttpServer:
 
                 conn_header_str = "Connection: keep-alive\r\nKeep-Alive: timeout=10\r\n" if keep_alive else "Connection: close\r\n"
 
-                # CORS プリフライト対応
+                # CORS プリフライト対応 (デバッグ・別オリジン開発用)
                 if method == "OPTIONS":
                     writer.write(
                         b"HTTP/1.1 204 No Content\r\n"
@@ -128,16 +113,13 @@ class HttpServer:
                         return
                     continue
 
-                # 1. 制御API: コマンド受信 & 最新テレメトリ返却 (/api/command)
-                if path == "/api/command":
-                    if method == "POST":
-                        if body:
-                            try:
-                                cmd = json.loads(body.decode("utf-8", errors="ignore"))
-                                self.controller.process_command(cmd)
-                            except Exception:
-                                self.controller.process_command({})
-                        else:
+                # 1. 制御 & テレメトリ API (/api/command, /api/telemetry)
+                if path in ("/api/command", "/api/telemetry"):
+                    if method == "POST" and body:
+                        try:
+                            cmd = json.loads(body.decode("utf-8", errors="ignore"))
+                            self.controller.process_command(cmd)
+                        except Exception:
                             self.controller.process_command({})
 
                     telemetry  = self.controller.get_telemetry()
@@ -156,26 +138,8 @@ class HttpServer:
                         return
                     continue
 
-                # 2. テレメトリ単体取得API (/api/telemetry)
-                if path == "/api/telemetry":
-                    telemetry  = self.controller.get_telemetry()
-                    resp_bytes = json.dumps(telemetry).encode("utf-8")
-                    header     = (
-                        "HTTP/1.1 200 OK\r\n"
-                        "Content-Type: application/json; charset=utf-8\r\n"
-                        "Access-Control-Allow-Origin: *\r\n"
-                        "Cache-Control: no-cache, no-store, must-revalidate\r\n"
-                        f"{conn_header_str}"
-                        f"Content-Length: {len(resp_bytes)}\r\n\r\n"
-                    ).encode("utf-8")
-                    writer.write(header + resp_bytes)
-                    await writer.drain()
-                    if not keep_alive:
-                        return
-                    continue
-
-                # 3. カメラ MJPEG ストリーミング (/video_feed, /stream)
-                if path in ("/video_feed", "/stream"):
+                # 3. カメラ MJPEG ストリーミング (/video_feed)
+                if path == "/video_feed":
                     await self._handle_mjpeg_stream(writer)
                     return
 
@@ -251,11 +215,13 @@ class HttpServer:
                 content = f.read()
             ext          = os.path.splitext(file_path)[1].lower()
             content_type = MIME_TYPES.get(ext, "application/octet-stream")
+            # HTMLは更新反映のため no-cache、CSS/JS等の静的アセットは1日キャッシュしてマイコン負荷をゼロに
+            cache_ctrl   = "no-cache" if ext == ".html" else "public, max-age=86400"
             header       = (
                 "HTTP/1.1 200 OK\r\n"
                 f"Content-Type: {content_type}\r\n"
                 "Access-Control-Allow-Origin: *\r\n"
-                "Cache-Control: no-cache, must-revalidate\r\n"
+                f"Cache-Control: {cache_ctrl}\r\n"
                 f"{conn_header_str}"
                 f"Content-Length: {len(content)}\r\n\r\n"
             ).encode("utf-8")
