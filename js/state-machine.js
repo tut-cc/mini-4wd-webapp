@@ -40,7 +40,7 @@ export class StateMachine {
 
         if (this.state.endsWith('_PENDING')) {
             if (data.mode === MCUMode.MANUAL) { this.clearTimer(); return this.transitionTo(UIState.MANUAL); }
-            if (data.mode !== MCUMode.AUTO) { this.clearTimer(); return this.syncToMCU(); }
+            if (data.mode !== MCUMode.AUTO)   { this.clearTimer(); return this.syncToMCU(); }
             return;
         }
 
@@ -51,7 +51,7 @@ export class StateMachine {
         const { mode, tor_active } = this.mcuData;
         this.transitionTo(
             mode === MCUMode.MANUAL_ABORT ? UIState.MANUAL_ABORT :
-            mode === MCUMode.AUTO_ABORT ? UIState.AUTO_ABORT :
+            mode === MCUMode.AUTO_ABORT   ? UIState.AUTO_ABORT   :
             mode === MCUMode.AUTO ? (tor_active ? UIState.AUTO_TOR : UIState.AUTO) : UIState.MANUAL
         );
     }
@@ -92,9 +92,7 @@ export class StateMachine {
                     this.transitionTo(UIState.MANUAL);
                 }
             }, Config.MODE_SWITCH_TIMEOUT_MS);
-        } else if (this.state.startsWith('AUTO')) {
-            this.startManualSwitch(this.state === UIState.AUTO_TOR);
-        }
+        } else if (this.state.startsWith('AUTO')) this.startManualSwitch(this.state === UIState.AUTO_TOR);
     }
 
     requestAbortAction() {

@@ -9,15 +9,15 @@ export class Mini4WDApp {
 
         this.ui = new UIManager({
             onDriveModeClick:   () => this.stateMachine.requestDriveModeToggle(),
-            onStopClick:        () => this.stateMachine.requestAbortAction(),
+            onStopClick:        () => this.stateMachine.requestAbortAction()    ,
             onTorTakeoverClick: () => this.stateMachine.requestTorTakeover()
         });
 
         this.stateMachine = new StateMachine(this);
 
         this.comm = new CommManager({
-            onConnect:          ()     => this.stateMachine.handleConnect(),
-            onDisconnect:       ()     => this.stateMachine.handleDisconnect(),
+            onConnect:          ()     => this.stateMachine.handleConnect()      ,
+            onDisconnect:       ()     => this.stateMachine.handleDisconnect()   ,
             onHeartbeat:        (data) => this.stateMachine.handleHeartbeat(data),
             getTransmitPayload: ()     => this.stateMachine.getTransmitPayload()
         });
@@ -25,5 +25,5 @@ export class Mini4WDApp {
 }
 
 const initApp = () => { if (!window.app) window.app = new Mini4WDApp(); };
-if   (document.readyState === 'loading') { window.addEventListener('DOMContentLoaded', initApp); }
-else                                     { initApp(); }
+if   (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', initApp);
+else                                     initApp();

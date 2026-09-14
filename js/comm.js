@@ -3,7 +3,7 @@ import { Config } from './constants.js';
 export class CommManager {
     constructor(cb) {
         this.cb            = cb;
-        this.lastHeartbeat = 0;
+        this.lastHeartbeat = 0 ;
         this.connected     = false;
         this.isRequesting  = false;
         this.apiUrl        = '/api/command';
@@ -38,19 +38,12 @@ export class CommManager {
             if (res.ok) {
                 const telemetry    = await res.json();
                 this.lastHeartbeat = Date.now();
-                if (!this.connected) {
-                    this.connected = true;
-                    this.cb.onConnect?.();
-                }
+                if (!this.connected) { this.connected = true; this.cb.onConnect?.(); }
                 this.cb.onHeartbeat?.(telemetry);
-            } else {
-                if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost();
-            }
-        } catch (_) {
-            if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost();
-        } finally {
-            this.isRequesting = false;
+            } else if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost();
         }
+        catch (_) { if (this.connected && Date.now() - this.lastHeartbeat > Config.HEARTBEAT_TIMEOUT_MS) this.onLost(); }
+        finally   { this.isRequesting = false; }
     }
 
     onLost() {
