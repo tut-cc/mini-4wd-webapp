@@ -12,15 +12,15 @@ from .constants  import DEFAULT_HOST, DEFAULT_PORT, HEARTBEAT_INTERVAL_SEC
 from .controller import VehicleController
 
 MIME_TYPES = {
-    ".html": "text/html; charset=utf-8",
-    ".js":   "application/javascript; charset=utf-8",
-    ".css":  "text/css; charset=utf-8",
-    ".json": "application/json; charset=utf-8",
-    ".png":  "image/png",
-    ".jpg":  "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".ico":  "image/x-icon",
-    ".svg":  "image/svg+xml",
+    ".html": "text/html; charset=utf-8"             ,
+    ".js"  : "application/javascript; charset=utf-8",
+    ".css" : "text/css; charset=utf-8"              ,
+    ".json": "application/json; charset=utf-8"      ,
+    ".png" : "image/png"                            ,
+    ".jpg" : "image/jpeg"                           ,
+    ".jpeg": "image/jpeg"                           ,
+    ".ico" : "image/x-icon"                         ,
+    ".svg" : "image/svg+xml"                        ,
 }
 
 class CameraProvider(Protocol):
@@ -28,23 +28,23 @@ class CameraProvider(Protocol):
 
 class HttpServer:
     def __init__(
-        self,
-        controller: VehicleController,
-        camera_provider: Optional[CameraProvider] = None,
-        static_dir: Optional[str] = None,
-        host: str = DEFAULT_HOST,
-        port: int = DEFAULT_PORT,
-        heartbeat_interval: float = HEARTBEAT_INTERVAL_SEC,
-        keepalive_timeout: float = 10.0,
+        self                                                                 ,
+        controller:         VehicleController                                ,
+        camera_provider:    Optional[CameraProvider] = None                  ,
+        static_dir:         Optional[str]            = None                  ,
+        host:               str                      = DEFAULT_HOST          ,
+        port:               int                      = DEFAULT_PORT          ,
+        heartbeat_interval: float                    = HEARTBEAT_INTERVAL_SEC,
+        keepalive_timeout:  float                    = 10.0                  ,
     ):
-        self.controller = controller
-        self.camera_provider = camera_provider
-        self.static_dir = static_dir or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.host = host
-        self.port = port
+        self.controller         = controller
+        self.camera_provider    = camera_provider
+        self.static_dir         = static_dir or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.host               = host
+        self.port               = port
         self.heartbeat_interval = heartbeat_interval
-        self.keepalive_timeout = keepalive_timeout
-        self._server = None
+        self.keepalive_timeout  = keepalive_timeout
+        self._server            = None
 
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         """HTTPリクエスト受付 (API / MJPEG / 静的配信 / Keep-Alive対応)"""
@@ -64,11 +64,11 @@ class HttpServer:
                     buffer.extend(chunk)
 
                 header_part, _, rest = buffer.partition(b"\r\n\r\n")
-                lines = header_part.decode("utf-8", errors="ignore").split("\r\n")
-                parts = lines[0].split(" ") if lines else []
-                method = parts[0].upper() if parts else "GET"
-                path = (parts[1] if len(parts) > 1 else "/").split("?")[0]
-                version = parts[2].upper() if len(parts) > 2 else "HTTP/1.1"
+                lines                = header_part.decode("utf-8", errors="ignore").split("\r\n")
+                parts                = lines[0].split(" ") if lines else []
+                method               = parts[0].upper()    if parts else "GET"
+                path                 = (parts[1] if len(parts) > 1 else "/").split("?")[0]
+                version              = parts[2].upper()    if len(parts) > 2 else "HTTP/1.1"
 
                 headers = {}
                 for line in lines[1:]:
@@ -101,17 +101,14 @@ class HttpServer:
 
                 while len(rest) < content_length:
                     try:
-                        chunk = await asyncio.wait_for(
-                            reader.read(min(65536, content_length - len(rest))),
-                            timeout=self.keepalive_timeout
-                        )
+                        chunk = await asyncio.wait_for(reader.read(min(65536, content_length - len(rest))), timeout=self.keepalive_timeout)
                     except asyncio.TimeoutError:
                         return
                     if not chunk:
                         return
                     rest.extend(chunk)
 
-                body = bytes(rest[:content_length])
+                body   = bytes(rest[:content_length])
                 buffer = bytearray(rest[content_length:])
 
                 conn_header_str = "Connection: keep-alive\r\nKeep-Alive: timeout=10\r\n" if keep_alive else "Connection: close\r\n"
@@ -143,9 +140,9 @@ class HttpServer:
                         else:
                             self.controller.process_command({})
 
-                    telemetry = self.controller.get_telemetry()
+                    telemetry  = self.controller.get_telemetry()
                     resp_bytes = json.dumps(telemetry).encode("utf-8")
-                    header = (
+                    header     = (
                         "HTTP/1.1 200 OK\r\n"
                         "Content-Type: application/json; charset=utf-8\r\n"
                         "Access-Control-Allow-Origin: *\r\n"
@@ -161,9 +158,9 @@ class HttpServer:
 
                 # 2. テレメトリ単体取得API (/api/telemetry)
                 if path == "/api/telemetry":
-                    telemetry = self.controller.get_telemetry()
+                    telemetry  = self.controller.get_telemetry()
                     resp_bytes = json.dumps(telemetry).encode("utf-8")
-                    header = (
+                    header     = (
                         "HTTP/1.1 200 OK\r\n"
                         "Content-Type: application/json; charset=utf-8\r\n"
                         "Access-Control-Allow-Origin: *\r\n"
@@ -200,7 +197,7 @@ class HttpServer:
     async def _handle_mjpeg_stream(self, writer: asyncio.StreamWriter):
         """MJPEG カメラストリーム配信 (/video_feed)"""
         if not self.camera_provider:
-            body = b"Camera not configured"
+            body   = b"Camera not configured"
             header = (
                 "HTTP/1.1 404 Not Found\r\n"
                 "Content-Type: text/plain; charset=utf-8\r\n"
@@ -237,11 +234,11 @@ class HttpServer:
 
     async def _handle_static_file(self, writer: asyncio.StreamWriter, path: str, conn_header_str: str = "Connection: keep-alive\r\n"):
         """静的Webアセット配信"""
-        rel_path = "index.html" if path in ("", "/") else path.lstrip("/")
+        rel_path  = "index.html" if path in ("", "/") else path.lstrip("/")
         file_path = os.path.normpath(os.path.join(self.static_dir, rel_path))
 
         if not file_path.startswith(self.static_dir) or not os.path.isfile(file_path):
-            body = b"404 Not Found"
+            body   = b"404 Not Found"
             header = (
                 "HTTP/1.1 404 Not Found\r\n"
                 "Content-Type: text/plain; charset=utf-8\r\n"
@@ -252,9 +249,9 @@ class HttpServer:
         else:
             with open(file_path, "rb") as f:
                 content = f.read()
-            ext = os.path.splitext(file_path)[1].lower()
+            ext          = os.path.splitext(file_path)[1].lower()
             content_type = MIME_TYPES.get(ext, "application/octet-stream")
-            header = (
+            header       = (
                 "HTTP/1.1 200 OK\r\n"
                 f"Content-Type: {content_type}\r\n"
                 "Access-Control-Allow-Origin: *\r\n"
